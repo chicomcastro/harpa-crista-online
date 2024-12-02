@@ -11,12 +11,7 @@
   onMount(async () => {
     const response = await fetch("/api/songs");
     songs = await response.json();
-
-    // Pega a searchQuery da URL se existir
-    const urlSearchQuery = $page.url.searchParams.get("q");
-    if (urlSearchQuery) {
-      searchQuery = urlSearchQuery;
-    }
+    applySearchQuery(searchQuery);
   });
 
   // Atualiza a URL quando a searchQuery mudar
@@ -32,8 +27,20 @@
     }
   }
 
+  // Reagir às mudanças na URL
+  $: {
+    const urlSearchQuery = $page.url.searchParams.get("q");
+    if (urlSearchQuery) {
+      searchQuery = urlSearchQuery;
+    }
+  }
+
   // Filtra as músicas baseado na searchQuery
   $: {
+    applySearchQuery(searchQuery);
+  }
+
+  function applySearchQuery(searchQuery) {
     if (searchQuery) {
       filteredSongs = songs.filter(
         (song) =>
