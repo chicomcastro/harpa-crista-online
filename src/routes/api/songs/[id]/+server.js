@@ -1,18 +1,24 @@
 import { json } from '@sveltejs/kit';
 import fs from 'fs/promises';
-import path from 'path';
+import { join } from 'path';
 
 export async function GET({ params }) {
   try {
     const { id } = params;
-    const inputDir = path.join(process.cwd(), 'src', 'routes', 'data');
-    const filePath = path.join(inputDir, id);
+    const inputDir = join(process.cwd(), 'static', 'data');
+    const filePath = join(inputDir, id);
+
     const content = await fs.readFile(filePath, 'utf-8');
-    
-    const title = id.replace(/^\d+\.\s*/, '').replace(/\.txt$/, '');
-    
+    const match = id.match(/^(\d+)\.\s*(.+)\.txt$/);
+
+    if (!match) {
+      return new Response('Song not found', { status: 404 });
+    }
+
     return json({
-      title,
+      id,
+      number: parseInt(match[1]),
+      title: match[2].trim(),
       content
     });
   } catch (error) {

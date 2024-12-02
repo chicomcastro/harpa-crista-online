@@ -5,7 +5,7 @@ import { join } from 'path';
 
 export async function GET() {
   try {
-    const inputDir = join(process.cwd(), 'src', 'routes', 'data');
+    const inputDir = join(process.cwd(), 'static', 'data');
     const files = await fs.readdir(inputDir);
     
     const songs = (await Promise.all(files
