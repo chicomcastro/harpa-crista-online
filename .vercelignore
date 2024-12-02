@@ -1,0 +1,9 @@
+# Ignore everything
+*
+# Except these directories/files
+!package.json
+!package-lock.json
+!svelte.config.js
+!vite.config.js
+!src
+!static

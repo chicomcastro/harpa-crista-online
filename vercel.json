@@ -1,7 +1,0 @@
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": ".svelte-kit/vercel",
-  "files": [
-    "src/input/**"
-  ]
-}
