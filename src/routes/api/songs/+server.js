@@ -1,10 +1,11 @@
 import { json } from '@sveltejs/kit';
 import fs from 'fs/promises';
 import path from 'path';
+import { join } from 'path';
 
 export async function GET() {
   try {
-    const inputDir = path.join(process.cwd(), 'src/input');
+    const inputDir = join(process.cwd(), 'src', 'routes', 'data');
     const files = await fs.readdir(inputDir);
     
     const songs = (await Promise.all(files
