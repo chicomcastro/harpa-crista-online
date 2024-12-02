@@ -22,7 +22,7 @@ export async function GET() {
         return null;
       })
       .filter(Boolean)
-      .sort((a, b) => a.number - b.number);
+      .sort((a, b) => (a?.number || 0) - (b?.number || 0));
 
     return json(songs);
   } catch (error) {
