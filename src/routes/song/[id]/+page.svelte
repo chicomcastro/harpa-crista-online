@@ -14,7 +14,7 @@
         .split("\n")
         .map((line) => line.trim())
         .filter((line) => line !== "")
-    );
+    ).filter((verse) => verse.length > 0);
   }
 
   onMount(async () => {
