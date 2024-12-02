@@ -28,8 +28,6 @@
     number = songId.split(".")[0];
   });
 
-  export let data;
-
   // Função para identificar se é refrão (não começa com número)
   const isChorus = (verse) => !/^\d/.test(verse.trim());
 </script>
