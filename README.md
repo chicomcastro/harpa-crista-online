@@ -1,38 +1,61 @@
-# sv
+# Harpa Cristã Online
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Todos os 639 hinos da Harpa Cristã em uma aplicação web leve, rápida e offline-first.
 
-## Creating a project
+**[Acesse aqui](https://chicomcastro.github.io/harpa-crista-online/)**
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Funcionalidades
+
+- **Busca completa** — por título, número ou conteúdo da letra
+- **Favoritos** — salve seus hinos mais usados (persistidos no navegador)
+- **Modo escuro** — com detecção automática da preferência do sistema
+- **Offline** — funciona sem internet após o primeiro acesso (PWA)
+- **Navegação entre hinos** — botões anterior/próximo e atalhos de teclado (setas)
+- **Ajuste de fonte** — controle o tamanho do texto na leitura
+- **Compartilhamento** — via Web Share API ou cópia para área de transferência
+- **Responsivo** — funciona em celular, tablet e desktop
+
+## Stack
+
+- [SvelteKit](https://kit.svelte.dev/) + [Svelte 5](https://svelte.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Vite](https://vitejs.dev/)
+- Deploy estático no [GitHub Pages](https://pages.github.com/)
+
+## Desenvolvimento
 
 ```bash
-# create a new project in the current directory
-npx sv create
+# Instalar dependências
+npm install
 
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
+# Iniciar servidor de desenvolvimento
 npm run dev
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
+# Build para produção
 npm run build
+
+# Preview do build
+npm run preview
 ```
 
-You can preview the production build with `npm run preview`.
+## Estrutura
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```
+src/
+├── lib/
+│   ├── stores.js      # Favoritos, dark mode, tamanho de fonte
+│   ├── utils.js        # Parse de versos, highlight, compartilhamento
+│   └── songs.json      # Gerado automaticamente no build
+├── routes/
+│   ├── +page.svelte    # Listagem e busca de hinos
+│   └── song/[id]/      # Detalhe do hino
+data/                    # 639 arquivos .txt com as letras
+scripts/
+└── generate-songs.js   # Converte .txt → songs.json
+```
+
+Os hinos são armazenados como arquivos `.txt` em `data/` e compilados em um único JSON no build, eliminando a necessidade de servidor ou banco de dados.
+
+## Licença
+
+Os textos dos hinos pertencem à Casa Publicadora das Assembleias de Deus (CPAD).
