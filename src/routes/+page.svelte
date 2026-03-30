@@ -1,111 +1,163 @@
 <script>
-  import { onMount } from "svelte";
-  import { page } from "$app/stores";
-  import { goto } from "$app/navigation";
-  import { browser } from "$app/environment";
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
+  import { browser } from '$app/environment';
+  import { songs, favorites } from '$lib/stores.js';
+  import { getPreview, highlightMatch } from '$lib/utils.js';
 
-  let songs = [];
-  let searchQuery = "";
-  let filteredSongs = [];
+  let searchQuery = $state($page.url.searchParams.get('q') || '');
+  let showFavoritesOnly = $state(false);
+  let searchInput;
 
-  onMount(async () => {
-    const response = await fetch("/api/songs");
-    songs = await response.json();
-    applySearchQuery(searchQuery);
+  let filteredSongs = $derived.by(() => {
+    let result = songs;
+    if (showFavoritesOnly) {
+      result = result.filter(s => $favorites.includes(s.number));
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(s =>
+        s.title.toLowerCase().includes(q) ||
+        s.number.toString() === q.trim() ||
+        s.content.toLowerCase().includes(q)
+      );
+    }
+    return result;
   });
 
-  // Atualiza a URL quando a searchQuery mudar
-  $: {
-    if (browser) {
-      const url = new URL($page.url);
-      if (searchQuery) {
-        url.searchParams.set("q", searchQuery);
-      } else {
-        url.searchParams.delete("q");
-      }
-      goto(url, { replaceState: true, keepFocus: true });
-    }
-  }
-
-  // Reagir às mudanças na URL
-  $: {
-    const urlSearchQuery = $page.url.searchParams.get("q");
-    if (urlSearchQuery) {
-      searchQuery = urlSearchQuery;
-    }
-  }
-
-  // Filtra as músicas baseado na searchQuery
-  $: {
-    applySearchQuery(searchQuery);
-  }
-
-  function applySearchQuery(searchQuery) {
+  // Sync search to URL
+  $effect(() => {
+    if (!browser) return;
+    const url = new URL($page.url);
     if (searchQuery) {
-      filteredSongs = songs.filter(
-        (song) =>
-          song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          song.content.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      url.searchParams.set('q', searchQuery);
     } else {
-      filteredSongs = songs;
+      url.searchParams.delete('q');
+    }
+    goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true });
+  });
+
+  function handleKeydown(e) {
+    if (e.key === '/' && document.activeElement !== searchInput) {
+      e.preventDefault();
+      searchInput?.focus();
+    }
+    if (e.key === 'Escape') {
+      searchQuery = '';
+      searchInput?.blur();
     }
   }
 </script>
 
-<main class="container mx-auto p-4">
-  <h1 class="text-3xl font-bold mb-6 text-center">Harpa Cristã Online</h1>
+<svelte:window on:keydown={handleKeydown} />
 
-  <div class="search-container">
+<div class="container mx-auto px-4 py-6 max-w-5xl">
+  <!-- Search -->
+  <div class="relative mb-6">
+    <label for="search" class="sr-only">Pesquisar hinos</label>
+    <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg>
     <input
+      id="search"
       type="text"
+      bind:this={searchInput}
       bind:value={searchQuery}
-      placeholder="Pesquisar música por título ou conteúdo..."
-      class="search-input"
+      placeholder="Pesquisar por título, número ou conteúdo..."
+      class="w-full pl-10 pr-20 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-base transition-shadow shadow-sm focus:shadow-md"
     />
+    <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+      {#if searchQuery}
+        <button
+          onclick={() => { searchQuery = ''; searchInput?.focus(); }}
+          class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+          aria-label="Limpar busca"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      {/if}
+      <kbd class="hidden sm:inline-block text-xs text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 font-mono">/</kbd>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    {#each filteredSongs as song}
-      <a
-        href={`/song/${encodeURIComponent(song.id)}`}
-        class="p-4 border rounded-lg hover:bg-gray-50 transition-colors shadow-sm hover:shadow-md"
-      >
-        <div class="flex items-start gap-2">
-          <span class="text-lg font-semibold text-gray-600">#{song.number}</span
+  <!-- Filters bar -->
+  <div class="flex items-center justify-between mb-4">
+    <button
+      onclick={() => showFavoritesOnly = !showFavoritesOnly}
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors {showFavoritesOnly ? 'bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-300' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+      aria-pressed={showFavoritesOnly}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={showFavoritesOnly ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+      </svg>
+      Favoritos
+      {#if $favorites.length > 0}
+        <span class="bg-brand-200 dark:bg-brand-800 text-brand-800 dark:text-brand-200 text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">{$favorites.length}</span>
+      {/if}
+    </button>
+
+    <span class="text-sm text-gray-400 dark:text-gray-500">
+      {filteredSongs.length} {filteredSongs.length === 1 ? 'hino' : 'hinos'}
+    </span>
+  </div>
+
+  <!-- Song grid -->
+  {#if filteredSongs.length > 0}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {#each filteredSongs as song (song.id)}
+        <a
+          href="{base}/song/{song.id}"
+          class="group relative p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all"
+        >
+          <div class="flex items-start gap-3">
+            <span class="shrink-0 w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-sm font-bold">
+              {song.number}
+            </span>
+            <div class="min-w-0 flex-1">
+              <h2 class="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm leading-tight">
+                {#if searchQuery.trim().length >= 2}
+                  {@html highlightMatch(song.title, searchQuery)}
+                {:else}
+                  {song.title}
+                {/if}
+              </h2>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-1">
+                {getPreview(song.content)}
+              </p>
+            </div>
+          </div>
+
+          <!-- Favorite button -->
+          <button
+            onclick={(e) => { e.preventDefault(); e.stopPropagation(); favorites.toggle(song.number); }}
+            class="absolute top-3 right-3 p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity {$favorites.includes(song.number) ? '!opacity-100 text-red-500' : 'text-gray-300 dark:text-gray-600 hover:text-red-400'}"
+            aria-label={$favorites.includes(song.number) ? `Remover ${song.title} dos favoritos` : `Adicionar ${song.title} aos favoritos`}
           >
-          <h2 class="text-xl font-semibold text-gray-800">{song.title}</h2>
-        </div>
-      </a>
-    {/each}
-  </div>
-
-  {#if songs.length === 0}
-    <p class="text-center text-gray-600 mt-8">Carregando músicas...</p>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={$favorites.includes(song.number) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            </svg>
+          </button>
+        </a>
+      {/each}
+    </div>
+  {:else if showFavoritesOnly && $favorites.length === 0}
+    <div class="text-center py-16">
+      <svg class="mx-auto mb-4 text-gray-300 dark:text-gray-700" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+      </svg>
+      <p class="text-gray-500 dark:text-gray-400 font-medium">Nenhum favorito ainda</p>
+      <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">Toque no coração nos hinos para salvar seus favoritos</p>
+    </div>
+  {:else}
+    <div class="text-center py-16">
+      <svg class="mx-auto mb-4 text-gray-300 dark:text-gray-700" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+      <p class="text-gray-500 dark:text-gray-400 font-medium">Nenhum hino encontrado</p>
+      <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">Tente pesquisar com outras palavras</p>
+    </div>
   {/if}
-</main>
-
-<style>
-  :global(body) {
-    background-color: #f9fafb;
-  }
-
-  .search-container {
-    margin: 1rem 0;
-    width: 100%;
-  }
-
-  .search-input {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-  }
-
-  .search-input:focus {
-    outline: none;
-    border-color: #666;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-  }
-</style>
+</div>
