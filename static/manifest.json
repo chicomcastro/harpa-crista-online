@@ -1,7 +1,7 @@
 {
   "name": "Harpa Cristã Online",
   "short_name": "Harpa Cristã",
-  "description": "Todos os 639 hinos da Harpa Cristã com busca, favoritos e modo offline.",
+  "description": "Todos os 640 hinos da Harpa Cristã com busca, favoritos e modo offline.",
   "start_url": "/harpa-crista-online/",
   "scope": "/harpa-crista-online/",
   "display": "standalone",

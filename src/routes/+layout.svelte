@@ -53,6 +53,6 @@
   </main>
 
   <footer class="text-center text-xs text-gray-400 dark:text-gray-600 py-4">
-    Harpa Cristã Online — 639 hinos
+    Harpa Cristã Online — 640 hinos
   </footer>
 </div>

@@ -5,10 +5,19 @@
   import { parseVerses, shareSong } from '$lib/utils.js';
 
   let shareTooltip = $state('');
+  let copyTooltip = $state('');
+  let audioError = $state(false);
+
+  // Reset audio error when song changes
+  $effect(() => {
+    $page.params.id;
+    audioError = false;
+  });
 
   const songId = $derived(parseInt($page.params.id));
   const song = $derived(songs.find(s => s.id === songId) || null);
   const songIndex = $derived(song ? songs.indexOf(song) : -1);
+  const audioUrl = $derived(song ? `https://harpa.nyc3.digitaloceanspaces.com/${String(song.number).padStart(3, '0')}.mp3` : '');
   const prevSong = $derived(songIndex > 0 ? songs[songIndex - 1] : null);
   const nextSong = $derived(songIndex < songs.length - 1 ? songs[songIndex + 1] : null);
   const verses = $derived(song ? parseVerses(song.content) : []);
@@ -22,6 +31,17 @@
       shareTooltip = 'Link copiado!';
       setTimeout(() => shareTooltip = '', 2000);
     }
+  }
+
+  async function handleCopy() {
+    if (!song) return;
+    const text = verses.map(v => v.lines.join('\n')).join('\n\n');
+    const full = `${song.title} (Harpa Cristã #${song.number})\n\n${text}`;
+    try {
+      await navigator.clipboard.writeText(full);
+      copyTooltip = 'Copiado!';
+      setTimeout(() => copyTooltip = '', 2000);
+    } catch {}
   }
 
   function handleKeydown(e) {
@@ -88,6 +108,20 @@
           </svg>
         </button>
 
+        <!-- Copy -->
+        <div class="relative">
+          <button onclick={handleCopy} class="btn-icon" aria-label="Copiar letra">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+          </button>
+          {#if copyTooltip}
+            <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 px-2 py-1 rounded">
+              {copyTooltip}
+            </span>
+          {/if}
+        </div>
+
         <!-- Share -->
         <div class="relative">
           <button onclick={handleShare} class="btn-icon" aria-label="Compartilhar hino">
@@ -113,6 +147,21 @@
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">{song.title}</h1>
       </div>
     </div>
+
+    <!-- Audio player -->
+    {#if !audioError}
+      <div class="mb-8">
+        <audio
+          src={audioUrl}
+          controls
+          preload="none"
+          onerror={() => audioError = true}
+          class="w-full h-10 rounded-lg [&::-webkit-media-controls-panel]:bg-gray-100 dark:[&::-webkit-media-controls-panel]:bg-gray-800"
+        >
+          <track kind="captions" />
+        </audio>
+      </div>
+    {/if}
 
     <!-- Verses -->
     <div class="song-content font-serif" style="font-size: {$fontSize}px; line-height: 1.7;">

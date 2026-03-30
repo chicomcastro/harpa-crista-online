@@ -1,6 +1,6 @@
 # Harpa Cristã Online
 
-Todos os 639 hinos da Harpa Cristã em uma aplicação web leve, rápida e offline-first.
+Todos os 640 hinos da Harpa Cristã em uma aplicação web leve, rápida e offline-first.
 
 **[Acesse aqui](https://chicomcastro.github.io/harpa-crista-online/)**
 
@@ -13,6 +13,8 @@ Todos os 639 hinos da Harpa Cristã em uma aplicação web leve, rápida e offli
 - **Navegação entre hinos** — botões anterior/próximo e atalhos de teclado (setas)
 - **Ajuste de fonte** — controle o tamanho do texto na leitura
 - **Compartilhamento** — via Web Share API ou cópia para área de transferência
+- **Copiar letra** — copia o texto formatado do hino para a área de transferência
+- **Player de áudio** — reprodução do hino com áudio externo (quando disponível)
 - **Responsivo** — funciona em celular, tablet e desktop
 
 ## Stack
