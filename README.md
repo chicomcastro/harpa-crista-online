@@ -51,7 +51,7 @@ src/
 ├── routes/
 │   ├── +page.svelte    # Listagem e busca de hinos
 │   └── song/[id]/      # Detalhe do hino
-data/                    # 639 arquivos .txt com as letras
+data/                    # 640 arquivos .txt com as letras
 scripts/
 └── generate-songs.js   # Converte .txt → songs.json
 ```
