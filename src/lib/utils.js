@@ -268,7 +268,7 @@ export function dailyHymnImage({ number, title, content }) {
   // Footer brand
   ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
   ctx.font = '36px system-ui, -apple-system, sans-serif';
-  ctx.fillText('harpacrista.online', W / 2, H - 120);
+  ctx.fillText('chicomcastro.github.io/harpa-crista-online', W / 2, H - 120);
   ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
   ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
   ctx.fillText('HARPA CRISTÃ', W / 2, H - 70);
@@ -294,35 +294,166 @@ function wrapCentered(ctx, text, cx, y, maxWidth, lineHeight) {
   return rows.length;
 }
 
-/** Render a verse to a 1:1 canvas for sharing. */
-export function verseToImage({ title, number, lines, darkMode = false }) {
-  const width = 1080;
-  const height = 1080;
+export const VERSE_TEMPLATES = [
+  { id: 'cream', name: 'Clássico' },
+  { id: 'night', name: 'Noturno' },
+  { id: 'minimal', name: 'Minimal' },
+  { id: 'sunset', name: 'Gradiente' }
+];
+
+export const VERSE_FORMATS = [
+  { id: 'story', name: 'Story', w: 1080, h: 1920 },
+  { id: 'square', name: 'Post', w: 1080, h: 1080 }
+];
+
+/** Render a verse to a canvas using the selected template and format. */
+export function verseToImage({ title, number, lines }, template = 'cream', format = 'story') {
+  const fmt = VERSE_FORMATS.find(f => f.id === format) || VERSE_FORMATS[0];
+  const W = fmt.w, H = fmt.h;
+  const isSquare = format === 'square';
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = W;
+  canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const bg = darkMode ? '#111827' : '#fffbeb';
-  const fg = darkMode ? '#f9fafb' : '#1f2937';
-  const accent = darkMode ? '#fbbf24' : '#b45309';
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = accent;
-  ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
-  ctx.fillText(`Harpa Cristã #${number}`, 80, 120);
-  ctx.fillStyle = fg;
-  ctx.font = 'bold 44px Georgia, serif';
-  wrapText(ctx, title, 80, 200, width - 160, 56);
-  ctx.font = '40px Georgia, serif';
-  let y = 360;
-  for (const line of lines) {
-    const rows = wrapText(ctx, line, 80, y, width - 160, 56);
-    y += 56 * rows;
+
+  const pal = getVersePalette(template);
+  paintBackground(ctx, W, H, pal);
+
+  // Optional decorative quote mark
+  if (pal.showQuote) {
+    ctx.fillStyle = pal.quote;
+    ctx.font = `bold ${isSquare ? 420 : 700}px Georgia, serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('\u201C', isSquare ? 20 : 40, isSquare ? 360 : 580);
   }
-  ctx.fillStyle = accent;
-  ctx.font = '24px system-ui, -apple-system, sans-serif';
-  ctx.fillText('harpacrista.online', 80, height - 60);
+
+  const padX = 80;
+  const badgeSize = isSquare ? 24 : 30;
+  const titleSize = isSquare ? 42 : 56;
+  const badgeY = isSquare ? 90 : 130;
+  const titleY = isSquare ? 150 : 210;
+  const titleLineH = Math.round(titleSize * 1.15);
+
+  // Top badge
+  ctx.fillStyle = pal.accent;
+  ctx.font = `600 ${badgeSize}px system-ui, -apple-system, Inter, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`HARPA CRISTÃ  ·  Nº ${number}`, padX, badgeY);
+
+  ctx.fillStyle = pal.ink;
+  ctx.font = `700 ${titleSize}px Georgia, serif`;
+  const titleRows = wrapTextLeft(ctx, title.toUpperCase(), padX, titleY, W - padX * 2, titleLineH);
+
+  // Accent divider
+  const dividerY = titleY + titleRows * titleLineH + (isSquare ? 12 : 20);
+  if (pal.showDivider) {
+    ctx.fillStyle = pal.accent;
+    ctx.fillRect(padX, dividerY, 72, 3);
+  }
+
+  // Verse — centered. Strip leading "1. ", "2. " etc.
+  const cleanLines = lines.map(l => l.replace(/^\s*\d+\.\s*/, ''));
+  ctx.fillStyle = pal.ink;
+  ctx.textAlign = 'center';
+  const totalChars = cleanLines.reduce((s, l) => s + l.length, 0);
+  let base = isSquare ? 52 : 64;
+  if (totalChars > 140) base -= 8;
+  if (totalChars > 200) base -= 8;
+  if (totalChars > 280) base -= 6;
+  const fontSize = Math.max(isSquare ? 32 : 38, base);
+  ctx.font = `400 ${fontSize}px Georgia, serif`;
+  const lineH = Math.round(fontSize * 1.5);
+  const wrapped = cleanLines.map(l => computeWrap(ctx, l, W - 200));
+  const totalRows = wrapped.reduce((s, r) => s + r.length, 0) + (cleanLines.length - 1) * 0.5;
+  const blockH = totalRows * lineH;
+  const verseMinY = dividerY + (isSquare ? 60 : 100);
+  let y = Math.max(verseMinY, (H - blockH) / 2);
+  for (const rows of wrapped) {
+    for (const r of rows) { ctx.fillText(r, W / 2, y); y += lineH; }
+    y += lineH * 0.5;
+  }
+
+  // Footer
+  ctx.textAlign = 'left';
+  ctx.fillStyle = pal.dim;
+  ctx.font = `500 ${isSquare ? 22 : 28}px system-ui, -apple-system, Inter, sans-serif`;
+  ctx.fillText('chicomcastro.github.io/harpa-crista-online', padX, H - (isSquare ? 60 : 90));
+
   return canvas;
+}
+
+function getVersePalette(id) {
+  switch (id) {
+    case 'night':
+      return {
+        type: 'linear', bg1: '#0b0b12', bg2: '#1a1423',
+        ink: '#f4efe7', dim: '#9b9289', accent: '#e6b872',
+        quote: '#e6b87222', showQuote: true, showDivider: true
+      };
+    case 'minimal':
+      return {
+        type: 'solid', bg: '#ffffff',
+        ink: '#111111', dim: '#888888', accent: '#111111',
+        showQuote: false, showDivider: true
+      };
+    case 'sunset':
+      return {
+        type: 'diagonal', bg1: '#3b0a4b', bg2: '#b03a6a', bg3: '#ff8a65',
+        ink: '#ffffff', dim: 'rgba(255,255,255,0.7)', accent: '#ffe0a3',
+        quote: 'rgba(255,255,255,0.12)', showQuote: true, showDivider: true
+      };
+    case 'cream':
+    default:
+      return {
+        type: 'linear', bg1: '#fbf6ee', bg2: '#f0e4d0',
+        ink: '#1a1625', dim: '#6b6257', accent: '#b45309',
+        quote: 'rgba(180,83,9,0.13)', showQuote: true, showDivider: true
+      };
+  }
+}
+
+function paintBackground(ctx, W, H, pal) {
+  if (pal.type === 'solid') {
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, W, H);
+    return;
+  }
+  if (pal.type === 'diagonal') {
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, pal.bg1);
+    grad.addColorStop(0.5, pal.bg2);
+    grad.addColorStop(1, pal.bg3);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    return;
+  }
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, pal.bg1);
+  grad.addColorStop(1, pal.bg2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function computeWrap(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const rows = [];
+  let line = '';
+  for (const w of words) {
+    const t = line ? line + ' ' + w : w;
+    if (ctx.measureText(t).width > maxWidth && line) {
+      rows.push(line);
+      line = w;
+    } else line = t;
+  }
+  if (line) rows.push(line);
+  return rows;
+}
+
+function wrapTextLeft(ctx, text, x, y, maxWidth, lineHeight) {
+  const rows = computeWrap(ctx, text, maxWidth);
+  rows.forEach((r, i) => ctx.fillText(r, x, y + i * lineHeight));
+  return rows.length;
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {

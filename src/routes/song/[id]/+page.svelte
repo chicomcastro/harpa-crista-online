@@ -2,7 +2,8 @@
   import { page } from '$app/stores';
   import { base } from '$app/paths';
   import { songs, favorites, fontSize, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
-  import { parseVerses, shareSong, verseToImage, haptic, shareOrDownloadCanvas } from '$lib/utils.js';
+  import { parseVerses, shareSong, haptic } from '$lib/utils.js';
+  import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import { track } from '$lib/analytics.js';
 
   let shareTooltip = $state('');
@@ -15,6 +16,13 @@
   let showPlaylistMenu = $state(false);
   let showMoreMenu = $state(false);
   let imageStatus = $state('');
+  let revealedVerse = $state(-1);
+  let previewVerse = $state(null);
+
+  function onShared(method) {
+    imageStatus = method === 'clipboard' ? 'Imagem copiada!' : method === 'download' ? 'Imagem baixada' : 'Compartilhado!';
+    setTimeout(() => imageStatus = '', 2000);
+  }
   let titleEl;
   let titleVisible = $state(true);
 
@@ -378,17 +386,21 @@
       {#each verses as verse, i}
         <div
           id="verse-{i}"
-          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 {activeVerse === i ? 'bg-brand-50/60 dark:bg-brand-950/40' : ''} {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700 italic text-gray-600 dark:text-gray-400' : ''}"
+          role="button"
+          tabindex="0"
+          onclick={() => revealedVerse = revealedVerse === i ? -1 : i}
+          onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); revealedVerse = revealedVerse === i ? -1 : i; } }}
+          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 cursor-pointer {activeVerse === i ? 'bg-brand-50/60 dark:bg-brand-950/40' : ''} {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700 italic text-gray-600 dark:text-gray-400' : ''}"
         >
           {#each verse.lines as line}
             <p class="mb-0.5">{line}</p>
           {/each}
           <button
-            onclick={() => shareVerseImage(verse)}
-            class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center gap-1"
+            onclick={(e) => { e.stopPropagation(); previewVerse = verse; revealedVerse = -1; }}
+            class="absolute top-1 right-1 w-8 h-8 flex items-center justify-center rounded-md text-gray-500 dark:text-gray-400 bg-gray-100/90 dark:bg-gray-800/90 hover:bg-gray-200 dark:hover:bg-gray-700 transition-opacity {revealedVerse === i ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'}"
             aria-label="Compartilhar este verso como imagem"
           >
-            <span class="mi mi-sm">image</span> imagem
+            <span class="mi mi-sm">share</span>
           </button>
         </div>
       {/each}
@@ -461,6 +473,18 @@
       {imageStatus}
     </div>
   {/if}
+
+  <ImagePreviewModal
+    open={!!previewVerse}
+    title={song.title}
+    number={song.number}
+    lines={previewVerse?.lines || []}
+    filename={`harpa-${song.number}.png`}
+    shareTitle={`Harpa Cristã #${song.number}`}
+    eventName="verse_image_shared"
+    onClose={() => previewVerse = null}
+    {onShared}
+  />
 {:else}
   <div class="container mx-auto px-4 py-16 text-center">
     <p class="text-xl text-gray-500 dark:text-gray-400">Hino não encontrado</p>

@@ -4,7 +4,8 @@
   import { base } from '$app/paths';
   import { browser } from '$app/environment';
   import { songs, favorites, recentlyViewed } from '$lib/stores.js';
-  import { getPreview, highlightMatch, searchSongs, hymnOfTheDay, encodeNumbers, decodeNumbers, haptic, dailyHymnImage, shareOrDownloadCanvas } from '$lib/utils.js';
+  import { getPreview, highlightMatch, searchSongs, hymnOfTheDay, encodeNumbers, decodeNumbers, haptic, parseVerses } from '$lib/utils.js';
+  import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import { audioCacheStatus, downloadAudios, clearAudioCache, refreshAudioCacheStatus } from '$lib/offline-audio.js';
   import { track } from '$lib/analytics.js';
   import { onMount, tick } from 'svelte';
@@ -91,25 +92,23 @@
     }
   });
 
-  async function shareDailyImage(e) {
+  let dailyPreviewOpen = $state(false);
+  const dailyPreviewLines = $derived(
+    dailyHymn
+      ? (parseVerses(dailyHymn.content).find(v => !v.isChorus)?.lines || parseVerses(dailyHymn.content)[0]?.lines || []).slice(0, 4)
+      : []
+  );
+
+  function openDailyPreview(e) {
     e.preventDefault();
     e.stopPropagation();
     if (!dailyHymn) return;
-    try {
-      const canvas = dailyHymnImage(dailyHymn);
-      const result = await shareOrDownloadCanvas(
-        canvas,
-        `hino-do-dia-${dailyHymn.number}.png`,
-        `Hino do dia — #${dailyHymn.number} ${dailyHymn.title}`
-      );
-      track('daily_hymn_image_shared', { number: dailyHymn.number, method: result.method });
-      toast = result.method === 'clipboard' ? 'Imagem copiada!' : result.method === 'download' ? 'Imagem baixada' : 'Compartilhado!';
-      setTimeout(() => toast = '', 2000);
-    } catch (err) {
-      console.error('Erro ao compartilhar imagem:', err);
-      toast = 'Erro ao gerar imagem';
-      setTimeout(() => toast = '', 3000);
-    }
+    dailyPreviewOpen = true;
+  }
+
+  function onDailyShared(method) {
+    toast = method === 'clipboard' ? 'Imagem copiada!' : method === 'download' ? 'Imagem baixada' : 'Compartilhado!';
+    setTimeout(() => toast = '', 2000);
   }
 
   async function shareFavorites() {
@@ -188,7 +187,7 @@
           <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{getPreview(dailyHymn.content)}</div>
         </div>
         <button
-          onclick={shareDailyImage}
+          onclick={openDailyPreview}
           class="absolute top-2 right-2 p-2 rounded-md text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           aria-label="Compartilhar imagem do hino do dia"
         >
@@ -352,4 +351,18 @@
   <div class="fixed left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 z-50 px-4 py-2 rounded-lg bg-gray-900/95 dark:bg-gray-100 text-white dark:text-gray-900 text-sm shadow-lg backdrop-blur">
     {toast}
   </div>
+{/if}
+
+{#if dailyHymn}
+  <ImagePreviewModal
+    open={dailyPreviewOpen}
+    title={dailyHymn.title}
+    number={dailyHymn.number}
+    lines={dailyPreviewLines}
+    filename={`hino-do-dia-${dailyHymn.number}.png`}
+    shareTitle={`Hino do dia — #${dailyHymn.number} ${dailyHymn.title}`}
+    eventName="daily_hymn_image_shared"
+    onClose={() => dailyPreviewOpen = false}
+    onShared={onDailyShared}
+  />
 {/if}
