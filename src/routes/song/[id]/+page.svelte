@@ -1,18 +1,111 @@
 <script>
   import { page } from '$app/stores';
   import { base } from '$app/paths';
-  import { songs, favorites, fontSize } from '$lib/stores.js';
-  import { parseVerses, shareSong } from '$lib/utils.js';
+  import { songs, favorites, fontSize, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
+  import { parseVerses, shareSong, verseToImage, haptic } from '$lib/utils.js';
+  import { track } from '$lib/analytics.js';
 
   let shareTooltip = $state('');
   let copyTooltip = $state('');
   let audioError = $state(false);
+  let audioEl;
+  let activeVerse = $state(-1);
+  let noteDraft = $state('');
+  let showNotes = $state(false);
+  let showPlaylistMenu = $state(false);
+  let showMoreMenu = $state(false);
+  let imageStatus = $state('');
+  let titleEl;
+  let titleVisible = $state(true);
+
+  $effect(() => {
+    if (!titleEl) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { titleVisible = entry.isIntersecting; },
+      { rootMargin: '-56px 0px 0px 0px' }
+    );
+    obs.observe(titleEl);
+    return () => obs.disconnect();
+  });
 
   // Reset audio error when song changes
   $effect(() => {
     $page.params.id;
     audioError = false;
   });
+
+  $effect(() => {
+    if (song) {
+      track('song_viewed', { song_id: song.id, number: song.number, title: song.title });
+      recentlyViewed.add(song.number);
+      noteDraft = $notes[song.number] || '';
+      showNotes = !!$notes[song.number];
+      activeVerse = -1;
+    }
+  });
+
+  function onAudioTimeUpdate() {
+    if (!audioEl || !audioEl.duration || verses.length === 0) return;
+    const ratio = audioEl.currentTime / audioEl.duration;
+    const idx = Math.min(verses.length - 1, Math.floor(ratio * verses.length));
+    if (idx !== activeVerse) {
+      activeVerse = idx;
+      const el = document.getElementById(`verse-${idx}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function saveNote() {
+    if (!song) return;
+    notes.set(song.number, noteDraft);
+    if (noteDraft.trim()) track('note_saved', { number: song.number });
+  }
+
+  async function shareVerseImage(verse) {
+    if (!song) return;
+    try {
+      const dataUrl = verseToImage({
+        title: song.title,
+        number: song.number,
+        lines: verse.lines,
+        darkMode: $darkMode
+      });
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `harpa-${song.number}.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Harpa Cristã #${song.number}` });
+      } else {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `harpa-${song.number}.png`;
+        a.click();
+      }
+      imageStatus = 'Imagem pronta!';
+      track('verse_image_shared', { number: song.number });
+      setTimeout(() => imageStatus = '', 2000);
+    } catch (err) {
+      imageStatus = 'Erro ao gerar imagem.';
+      setTimeout(() => imageStatus = '', 2000);
+    }
+  }
+
+  function addToPlaylist(id) {
+    if (!song) return;
+    playlists.addSong(id, song.number);
+    track('playlist_song_added', { number: song.number, from: 'song_page' });
+    showPlaylistMenu = false;
+  }
+
+  function createAndAdd() {
+    if (!song) return;
+    const name = prompt('Nome da nova lista:');
+    if (!name?.trim()) return;
+    const id = playlists.create(name.trim());
+    playlists.addSong(id, song.number);
+    track('playlist_created', { name, from: 'song_page' });
+    showPlaylistMenu = false;
+  }
 
   const songId = $derived(parseInt($page.params.id));
   const song = $derived(songs.find(s => s.id === songId) || null);
@@ -28,6 +121,7 @@
     const baseUrl = window.location.origin + base;
     const ok = await shareSong(song.number, song.title, baseUrl);
     if (ok) {
+      track('song_shared', { number: song.number, title: song.title });
       shareTooltip = 'Link copiado!';
       setTimeout(() => shareTooltip = '', 2000);
     }
@@ -39,6 +133,7 @@
     const full = `${song.title} (Harpa Cristã #${song.number})\n\n${text}`;
     try {
       await navigator.clipboard.writeText(full);
+      track('lyrics_copied', { number: song.number, title: song.title });
       copyTooltip = 'Copiado!';
       setTimeout(() => copyTooltip = '', 2000);
     } catch {}
@@ -46,10 +141,34 @@
 
   function handleKeydown(e) {
     if (e.key === 'ArrowLeft' && prevSong) {
+      track('hymn_navigated', { direction: 'prev', from: song.number, to: prevSong.number, method: 'keyboard' });
       window.location.href = `${base}/song/${prevSong.id}`;
     }
     if (e.key === 'ArrowRight' && nextSong) {
+      track('hymn_navigated', { direction: 'next', from: song.number, to: nextSong.number, method: 'keyboard' });
       window.location.href = `${base}/song/${nextSong.id}`;
+    }
+  }
+
+  // Horizontal swipe (only when not scrolling vertically)
+  let touchStartX = 0;
+  let touchStartY = 0;
+  function onTouchStart(e) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }
+  function onTouchEnd(e) {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    const dy = e.changedTouches[0].screenY - touchStartY;
+    if (Math.abs(dx) < 80 || Math.abs(dy) > 60) return;
+    if (dx < 0 && nextSong) {
+      track('hymn_navigated', { direction: 'next', from: song.number, to: nextSong.number, method: 'swipe' });
+      haptic(10);
+      window.location.href = `${base}/song/${nextSong.id}`;
+    } else if (dx > 0 && prevSong) {
+      track('hymn_navigated', { direction: 'prev', from: song.number, to: prevSong.number, method: 'swipe' });
+      haptic(10);
+      window.location.href = `${base}/song/${prevSong.id}`;
     }
   }
 </script>
@@ -57,63 +176,85 @@
 <svelte:head>
   {#if song}
     <title>#{song.number} {song.title} — Harpa Cristã Online</title>
+    <meta name="description" content={`Letra completa do hino ${song.number} "${song.title}" da Harpa Cristã. ${song.content.slice(0, 100)}…`} />
     <meta property="og:title" content="#{song.number} {song.title} — Harpa Cristã" />
     <meta property="og:description" content={song.content.slice(0, 150)} />
+    <meta property="og:type" content="article" />
+    {@html `<script type="application/ld+json">${JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'MusicComposition',
+      name: song.title,
+      identifier: `Harpa Cristã #${song.number}`,
+      inLanguage: 'pt-BR',
+      musicCompositionForm: 'Hymn',
+      lyrics: { '@type': 'CreativeWork', text: song.content }
+    })}</script>`}
   {/if}
 </svelte:head>
 
 <svelte:window on:keydown={handleKeydown} />
 
 {#if song}
+  <div ontouchstart={onTouchStart} ontouchend={onTouchEnd} role="presentation">
+  <!-- Mini sticky header (iOS-style) -->
+  <div
+    class="sticky top-14 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-all duration-200 {titleVisible ? 'opacity-0 -translate-y-2 pointer-events-none h-0 border-b-0' : 'opacity-100 translate-y-0'}"
+    aria-hidden={titleVisible}
+  >
+    <div class="container mx-auto px-4 max-w-2xl h-12 flex items-center gap-3">
+      <button
+        onclick={() => { if (history.length > 1) history.back(); else window.location.href = `${base}/`; }}
+        class="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 shrink-0"
+        aria-label="Voltar"
+      >
+        <span class="mi">arrow_back</span>
+      </button>
+      <div class="flex-1 min-w-0 text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
+        #{song.number} {song.title}
+      </div>
+    </div>
+  </div>
+
   <div class="container mx-auto px-4 py-6 max-w-2xl">
     <!-- Top bar -->
     <div class="flex items-center justify-between mb-6">
-      <a
-        href="{base}/"
-        class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-        aria-label="Voltar para lista de hinos"
+      <button
+        onclick={() => {
+          if (history.length > 1) history.back();
+          else window.location.href = `${base}/`;
+        }}
+        class="btn-icon text-gray-500 dark:text-gray-400"
+        aria-label="Voltar para lista"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m15 18-6-6 6-6"/>
-        </svg>
-        Hinos
-      </a>
-
+        <span class="mi">arrow_back</span>
+      </button>
       <div class="flex items-center gap-1">
         <!-- Font size controls -->
-        <button onclick={() => fontSize.decrease()} class="btn-icon" aria-label="Diminuir fonte">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14"/>
-          </svg>
+        <button onclick={() => { fontSize.decrease(); track('font_size_changed', { action: 'decrease', size: $fontSize }); }} class="btn-icon" aria-label="Diminuir fonte">
+          <span class="mi mi-sm">remove</span>
         </button>
-        <button onclick={() => fontSize.reset()} class="btn-icon text-xs font-mono text-gray-400 dark:text-gray-500 w-8 text-center" aria-label="Resetar fonte">
+        <button onclick={() => { fontSize.reset(); track('font_size_changed', { action: 'reset', size: $fontSize }); }} class="btn-icon text-xs font-mono text-gray-400 dark:text-gray-500 w-8 text-center" aria-label="Resetar fonte">
           {$fontSize}
         </button>
-        <button onclick={() => fontSize.increase()} class="btn-icon" aria-label="Aumentar fonte">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14"/><path d="M12 5v14"/>
-          </svg>
+        <button onclick={() => { fontSize.increase(); track('font_size_changed', { action: 'increase', size: $fontSize }); }} class="btn-icon" aria-label="Aumentar fonte">
+          <span class="mi mi-sm">add</span>
         </button>
 
         <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
 
         <!-- Favorite -->
         <button
-          onclick={() => favorites.toggle(song.number)}
+          onclick={() => { favorites.toggle(song.number); haptic(!isFavorite ? 15 : 8); track('favorite_toggled', { number: song.number, favorited: !isFavorite }); }}
           class="btn-icon {isFavorite ? 'text-red-500' : ''}"
           aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-          </svg>
+          <span class="mi mi-sm {isFavorite ? 'mi-filled' : ''}">favorite</span>
         </button>
 
         <!-- Copy -->
-        <div class="relative">
+        <div class="relative hidden sm:block">
           <button onclick={handleCopy} class="btn-icon" aria-label="Copiar letra">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-            </svg>
+            <span class="mi mi-sm">content_copy</span>
           </button>
           {#if copyTooltip}
             <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 px-2 py-1 rounded">
@@ -122,12 +263,46 @@
           {/if}
         </div>
 
+        <!-- Playlist -->
+        <div class="relative hidden sm:block">
+          <button onclick={() => showPlaylistMenu = !showPlaylistMenu} class="btn-icon" aria-label="Adicionar à lista">
+            <span class="mi mi-sm">playlist_add</span>
+          </button>
+          {#if showPlaylistMenu}
+            <div class="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-20 py-1">
+              <div class="px-3 py-1 text-xs text-gray-400 uppercase tracking-wider">Adicionar a</div>
+              {#each $playlists as pl (pl.id)}
+                <button
+                  onclick={() => addToPlaylist(pl.id)}
+                  disabled={pl.numbers.includes(song.number)}
+                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between"
+                >
+                  <span class="truncate">{pl.name}</span>
+                  {#if pl.numbers.includes(song.number)}<span class="text-xs text-gray-400">✓</span>{/if}
+                </button>
+              {/each}
+              <button
+                onclick={createAndAdd}
+                class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 border-t border-gray-100 dark:border-gray-800 text-brand-600 dark:text-brand-400"
+              >+ Nova lista</button>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Apresentação (desktop) -->
+        <a
+          href="{base}/song/{song.id}/present"
+          onclick={() => track('presentation_opened_nav', { number: song.number })}
+          class="btn-icon hidden sm:inline-flex"
+          aria-label="Modo apresentação"
+        >
+          <span class="mi mi-sm">present_to_all</span>
+        </a>
+
         <!-- Share -->
         <div class="relative">
           <button onclick={handleShare} class="btn-icon" aria-label="Compartilhar hino">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/>
-            </svg>
+            <span class="mi mi-sm">share</span>
           </button>
           {#if shareTooltip}
             <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 px-2 py-1 rounded">
@@ -135,11 +310,48 @@
             </span>
           {/if}
         </div>
+
+        <!-- More menu (mobile only) -->
+        <div class="relative sm:hidden">
+          <button onclick={() => showMoreMenu = !showMoreMenu} class="btn-icon" aria-label="Mais opções">
+            <span class="mi mi-sm">more_vert</span>
+          </button>
+          {#if showMoreMenu}
+            <div class="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-20 py-1">
+              <button onclick={() => { showMoreMenu = false; handleCopy(); }} class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+                Copiar letra
+              </button>
+              <a
+                href="{base}/song/{song.id}/present"
+                onclick={() => track('presentation_opened_nav', { number: song.number })}
+                class="block px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Modo apresentação
+              </a>
+              <div class="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+              <div class="px-3 py-1 text-xs text-gray-400 uppercase tracking-wider">Adicionar à lista</div>
+              {#each $playlists as pl (pl.id)}
+                <button
+                  onclick={() => { addToPlaylist(pl.id); showMoreMenu = false; }}
+                  disabled={pl.numbers.includes(song.number)}
+                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 flex items-center justify-between"
+                >
+                  <span class="truncate">{pl.name}</span>
+                  {#if pl.numbers.includes(song.number)}<span class="text-xs text-gray-400">✓</span>{/if}
+                </button>
+              {/each}
+              <button
+                onclick={() => { createAndAdd(); showMoreMenu = false; }}
+                class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-brand-600 dark:text-brand-400"
+              >+ Nova lista</button>
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
 
     <!-- Song header -->
-    <div class="mb-8">
+    <div class="mb-8" bind:this={titleEl}>
       <div class="flex items-center gap-3">
         <span class="shrink-0 w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-lg font-bold">
           {song.number}
@@ -152,10 +364,13 @@
     {#if !audioError}
       <div class="mb-8">
         <audio
+          bind:this={audioEl}
           src={audioUrl}
           controls
           preload="none"
-          onerror={() => audioError = true}
+          onplay={() => track('audio_played', { number: song.number, title: song.title })}
+          onerror={() => { audioError = true; track('audio_errored', { number: song.number }); }}
+          ontimeupdate={onAudioTimeUpdate}
           class="w-full h-10 rounded-lg [&::-webkit-media-controls-panel]:bg-gray-100 dark:[&::-webkit-media-controls-panel]:bg-gray-800"
         >
           <track kind="captions" />
@@ -166,12 +381,46 @@
     <!-- Verses -->
     <div class="song-content font-serif" style="font-size: {$fontSize}px; line-height: 1.7;">
       {#each verses as verse, i}
-        <div class="mb-6 {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700 italic text-gray-600 dark:text-gray-400' : ''}">
+        <div
+          id="verse-{i}"
+          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 {activeVerse === i ? 'bg-brand-50/60 dark:bg-brand-950/40' : ''} {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700 italic text-gray-600 dark:text-gray-400' : ''}"
+        >
           {#each verse.lines as line}
             <p class="mb-0.5">{line}</p>
           {/each}
+          <button
+            onclick={() => shareVerseImage(verse)}
+            class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center gap-1"
+            aria-label="Compartilhar este verso como imagem"
+          >
+            <span class="mi mi-sm">image</span> imagem
+          </button>
         </div>
       {/each}
+      {#if imageStatus}
+        <p class="text-xs text-brand-600 dark:text-brand-400 mt-2">{imageStatus}</p>
+      {/if}
+    </div>
+
+    <!-- Notes -->
+    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
+      {#if !showNotes && !noteDraft}
+        <button onclick={() => showNotes = true} class="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400">
+          + Adicionar nota pessoal
+        </button>
+      {:else}
+        <label class="block text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-2">
+          Nota pessoal
+        </label>
+        <textarea
+          bind:value={noteDraft}
+          onblur={saveNote}
+          placeholder="Reflexões, referências bíblicas, lembranças…"
+          rows="3"
+          class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+        ></textarea>
+        <p class="text-xs text-gray-400 mt-1">Salva automaticamente no seu navegador.</p>
+      {/if}
     </div>
 
     <!-- Navigation -->
@@ -179,11 +428,10 @@
       {#if prevSong}
         <a
           href="{base}/song/{prevSong.id}"
+          onclick={() => track('hymn_navigated', { direction: 'prev', from: song.number, to: prevSong.number, method: 'button' })}
           class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors group"
         >
-          <svg class="group-hover:-translate-x-0.5 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m15 18-6-6 6-6"/>
-          </svg>
+          <span class="mi mi-sm group-hover:-translate-x-0.5 transition-transform">chevron_left</span>
           <div class="text-right">
             <div class="text-xs text-gray-400 dark:text-gray-500">Anterior</div>
             <div class="font-medium">#{prevSong.number} {prevSong.title}</div>
@@ -196,15 +444,14 @@
       {#if nextSong}
         <a
           href="{base}/song/{nextSong.id}"
+          onclick={() => track('hymn_navigated', { direction: 'next', from: song.number, to: nextSong.number, method: 'button' })}
           class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors group text-right"
         >
           <div>
             <div class="text-xs text-gray-400 dark:text-gray-500">Próximo</div>
             <div class="font-medium">#{nextSong.number} {nextSong.title}</div>
           </div>
-          <svg class="group-hover:translate-x-0.5 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m9 18 6-6-6-6"/>
-          </svg>
+          <span class="mi mi-sm group-hover:translate-x-0.5 transition-transform">chevron_right</span>
         </a>
       {/if}
     </nav>
@@ -214,6 +461,7 @@
       Use as setas <kbd class="border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 font-mono">&larr;</kbd>
       <kbd class="border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 font-mono">&rarr;</kbd> para navegar
     </p>
+  </div>
   </div>
 {:else}
   <div class="container mx-auto px-4 py-16 text-center">

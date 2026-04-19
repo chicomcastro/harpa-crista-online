@@ -1,6 +1,10 @@
-const CACHE_NAME = 'harpa-crista-v1';
+const CACHE_NAME = 'harpa-crista-v3';
+const OFFLINE_URL = '/';
 
 self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.add(OFFLINE_URL)).catch(() => {})
+  );
   self.skipWaiting();
 });
 
@@ -15,18 +19,43 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+
+  // Never cache audio — it's large and streamed from DO Spaces.
+  if (url.hostname.includes('digitaloceanspaces.com')) return;
+
+  // Never cache Amplitude / analytics requests.
+  if (url.hostname.includes('amplitude')) return;
+
+  const isNav = event.request.mode === 'navigate';
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      const fetched = fetch(event.request).then(response => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(event.request);
+
+      const networkFetch = fetch(event.request).then(response => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          cache.put(event.request, response.clone()).catch(() => {});
         }
         return response;
-      }).catch(() => cached);
+      }).catch(() => null);
 
-      return cached || fetched;
-    })
+      // Stale-while-revalidate for static assets
+      if (cached) {
+        networkFetch.catch(() => {});
+        return cached;
+      }
+
+      const fresh = await networkFetch;
+      if (fresh) return fresh;
+
+      // Offline fallback for navigation
+      if (isNav) {
+        const offline = await cache.match(OFFLINE_URL);
+        if (offline) return offline;
+      }
+      return new Response('Offline', { status: 503, statusText: 'Offline' });
+    })()
   );
 });

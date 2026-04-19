@@ -9,7 +9,8 @@ export const songs = songsData;
 /** Favorites store — persists to localStorage */
 function createFavorites() {
   const initial = browser ? JSON.parse(localStorage.getItem('favorites') || '[]') : [];
-  const { subscribe, update } = writable(initial);
+  const { subscribe, update, set } = writable(initial);
+  const persist = (list) => { if (browser) localStorage.setItem('favorites', JSON.stringify(list)); };
 
   return {
     subscribe,
@@ -18,7 +19,19 @@ function createFavorites() {
         const next = favs.includes(number)
           ? favs.filter(n => n !== number)
           : [...favs, number];
-        if (browser) localStorage.setItem('favorites', JSON.stringify(next));
+        persist(next);
+        return next;
+      });
+    },
+    replace(numbers) {
+      const clean = Array.from(new Set(numbers.filter(n => Number.isInteger(n) && n > 0)));
+      persist(clean);
+      set(clean);
+    },
+    merge(numbers) {
+      update(favs => {
+        const next = Array.from(new Set([...favs, ...numbers.filter(n => Number.isInteger(n) && n > 0)]));
+        persist(next);
         return next;
       });
     }
@@ -82,3 +95,115 @@ function createFontSize() {
   };
 }
 export const fontSize = createFontSize();
+
+/** Recently viewed hymns — stores last N hymn numbers, most recent first */
+function createRecentlyViewed(limit = 30) {
+  const initial = browser ? JSON.parse(localStorage.getItem('recentlyViewed') || '[]') : [];
+  const { subscribe, update } = writable(initial);
+
+  return {
+    subscribe,
+    add(number) {
+      update(list => {
+        const next = [number, ...list.filter(n => n !== number)].slice(0, limit);
+        if (browser) localStorage.setItem('recentlyViewed', JSON.stringify(next));
+        return next;
+      });
+    },
+    clear() {
+      if (browser) localStorage.removeItem('recentlyViewed');
+      update(() => []);
+    }
+  };
+}
+export const recentlyViewed = createRecentlyViewed();
+
+/** Playlists — named ordered lists of hymn numbers */
+function createPlaylists() {
+  const initial = browser ? JSON.parse(localStorage.getItem('playlists') || '[]') : [];
+  const { subscribe, update } = writable(initial);
+  const persist = (list) => { if (browser) localStorage.setItem('playlists', JSON.stringify(list)); };
+
+  return {
+    subscribe,
+    create(name) {
+      const id = crypto.randomUUID();
+      update(list => {
+        const next = [...list, { id, name, numbers: [], createdAt: Date.now() }];
+        persist(next);
+        return next;
+      });
+      return id;
+    },
+    rename(id, name) {
+      update(list => {
+        const next = list.map(p => p.id === id ? { ...p, name } : p);
+        persist(next);
+        return next;
+      });
+    },
+    remove(id) {
+      update(list => {
+        const next = list.filter(p => p.id !== id);
+        persist(next);
+        return next;
+      });
+    },
+    addSong(id, number) {
+      update(list => {
+        const next = list.map(p => p.id === id && !p.numbers.includes(number)
+          ? { ...p, numbers: [...p.numbers, number] }
+          : p);
+        persist(next);
+        return next;
+      });
+    },
+    removeSong(id, number) {
+      update(list => {
+        const next = list.map(p => p.id === id
+          ? { ...p, numbers: p.numbers.filter(n => n !== number) }
+          : p);
+        persist(next);
+        return next;
+      });
+    },
+    reorder(id, numbers) {
+      update(list => {
+        const next = list.map(p => p.id === id ? { ...p, numbers } : p);
+        persist(next);
+        return next;
+      });
+    },
+    import(playlist) {
+      const id = crypto.randomUUID();
+      update(list => {
+        const next = [...list, { ...playlist, id, createdAt: Date.now() }];
+        persist(next);
+        return next;
+      });
+      return id;
+    }
+  };
+}
+export const playlists = createPlaylists();
+
+/** Personal notes per hymn number — { [number]: string } */
+function createNotes() {
+  const initial = browser ? JSON.parse(localStorage.getItem('notes') || '{}') : {};
+  const { subscribe, update } = writable(initial);
+
+  return {
+    subscribe,
+    set(number, text) {
+      update(notes => {
+        const next = { ...notes };
+        if (text.trim()) next[number] = text;
+        else delete next[number];
+        if (browser) localStorage.setItem('notes', JSON.stringify(next));
+        return next;
+      });
+    }
+  };
+}
+export const notes = createNotes();
+
