@@ -20,6 +20,15 @@
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_back,arrow_downward,arrow_forward,arrow_upward,check,chevron_left,chevron_right,close,content_copy,dark_mode,delete,edit,favorite,fullscreen,fullscreen_exit,image,ios_share,library_music,light_mode,more_vert,music_note,playlist_add,present_to_all,queue_music,remove,search,share" />
 		%sveltekit.head%
+		<script>
+			(function () {
+				try {
+					var s = localStorage.getItem('darkMode');
+					var d = s !== null ? s === 'true' : matchMedia('(prefers-color-scheme: dark)').matches;
+					if (d) document.documentElement.classList.add('dark');
+				} catch (_) {}
+			})();
+		</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
