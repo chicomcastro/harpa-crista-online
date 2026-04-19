@@ -39,7 +39,6 @@
   onMount(async () => {
     initAnalytics();
     if (import.meta.env.DEV) {
-      // Unregister any lingering SW in dev + purge caches to avoid stale bundles
       if ('serviceWorker' in navigator) {
         const regs = await navigator.serviceWorker.getRegistrations();
         for (const r of regs) await r.unregister();
@@ -51,7 +50,14 @@
       return;
     }
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(`${base}/sw.js`);
+      // Unregister old path (/sw.js) from previous versions
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) {
+        if (r.active && r.active.scriptURL.endsWith('/sw.js')) {
+          await r.unregister();
+        }
+      }
+      navigator.serviceWorker.register(`${base}/service-worker.js`, { scope: `${base}/` });
     }
   });
 </script>
@@ -80,7 +86,8 @@
           class="w-28 px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-brand-500 [&::-webkit-inner-spin-button]:appearance-none"
         />
       </form>
-      <a href="{base}/playlists" class="text-sm px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hidden sm:inline-block" aria-label="Listas">Listas</a>
+      <a href="{base}/playlists" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isListas ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Listas">Listas</a>
+      <a href="{base}/?favs=1" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isFavoritos ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Favoritos">Favoritos</a>
       <button
         onclick={() => { darkMode.toggle(); track('dark_mode_toggled', { enabled: !$darkMode }); }}
         class="btn-icon"

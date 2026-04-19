@@ -5,6 +5,7 @@
   import { browser } from '$app/environment';
   import { songs, favorites, recentlyViewed } from '$lib/stores.js';
   import { getPreview, highlightMatch, searchSongs, hymnOfTheDay, encodeNumbers, decodeNumbers, haptic, dailyHymnImage } from '$lib/utils.js';
+  import { audioCacheStatus, downloadAudios, clearAudioCache, refreshAudioCacheStatus } from '$lib/offline-audio.js';
   import { track } from '$lib/analytics.js';
   import { onMount, tick } from 'svelte';
 
@@ -73,6 +74,7 @@
   }
 
   onMount(() => {
+    refreshAudioCacheStatus();
     // Import favorites from URL hash: #favs=<encoded>
     const m = window.location.hash.match(/#favs=(.+)/);
     if (m) {
@@ -251,6 +253,41 @@
         </button>
       {/if}
     </div>
+
+    {#if $favorites.length > 0}
+      <div class="mb-4 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+            <span class="mi mi-sm text-brand-600 dark:text-brand-400">cloud_off</span>
+            Ouvir offline
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {#if $audioCacheStatus.downloading}
+              Baixando {$audioCacheStatus.progress}/{$audioCacheStatus.total}…
+            {:else if $audioCacheStatus.count > 0}
+              {$audioCacheStatus.count} áudio(s) salvos no dispositivo
+            {:else}
+              Baixa os MP3s dos favoritos pra tocar sem internet (~{Math.round($favorites.length * 2)}MB).
+            {/if}
+          </div>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          {#if $audioCacheStatus.count > 0 && !$audioCacheStatus.downloading}
+            <button
+              onclick={() => { if (confirm('Apagar todos os áudios salvos?')) { clearAudioCache(); track('offline_audio_cleared'); } }}
+              class="text-xs text-gray-500 dark:text-gray-400 hover:text-red-500"
+            >Limpar</button>
+          {/if}
+          <button
+            onclick={() => { downloadAudios($favorites); track('offline_audio_download_started', { count: $favorites.length }); }}
+            disabled={$audioCacheStatus.downloading}
+            class="text-xs px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50"
+          >
+            {$audioCacheStatus.downloading ? 'Baixando…' : 'Baixar'}
+          </button>
+        </div>
+      </div>
+    {/if}
   {/if}
 
   <!-- Song grid -->
