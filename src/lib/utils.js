@@ -153,7 +153,36 @@ export function decodePlaylist(str) {
   } catch { return null; }
 }
 
-/** Render a 9:16 "hino do dia" story-format PNG for social sharing. */
+/** Share a canvas as PNG, using Web Share API (with file) or blob download fallback. */
+export function shareOrDownloadCanvas(canvas, filename, title) {
+  return new Promise((resolve, reject) => {
+    if (!canvas?.toBlob) return reject(new Error('Canvas não suportado'));
+    canvas.toBlob(async (blob) => {
+      if (!blob) return reject(new Error('Falha ao gerar PNG'));
+      try {
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare?.({ files: [file] })) {
+          try { await navigator.share({ files: [file], title }); }
+          catch (err) {
+            if (err?.name !== 'AbortError') throw err;
+          }
+          return resolve({ method: 'share' });
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        resolve({ method: 'download' });
+      } catch (err) { reject(err); }
+    }, 'image/png');
+  });
+}
+
+/** Render a 9:16 "hino do dia" story-format canvas. */
 export function dailyHymnImage({ number, title, content }) {
   const W = 1080, H = 1920;
   const canvas = document.createElement('canvas');
@@ -212,7 +241,7 @@ export function dailyHymnImage({ number, title, content }) {
   ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
   ctx.fillText('HARPA CRISTÃ', W / 2, H - 70);
 
-  return canvas.toDataURL('image/png');
+  return canvas;
 }
 
 function wrapCentered(ctx, text, cx, y, maxWidth, lineHeight) {
@@ -233,7 +262,7 @@ function wrapCentered(ctx, text, cx, y, maxWidth, lineHeight) {
   return rows.length;
 }
 
-/** Render a verse to a PNG data URL for sharing as image. */
+/** Render a verse to a 1:1 canvas for sharing. */
 export function verseToImage({ title, number, lines, darkMode = false }) {
   const width = 1080;
   const height = 1080;
@@ -261,7 +290,7 @@ export function verseToImage({ title, number, lines, darkMode = false }) {
   ctx.fillStyle = accent;
   ctx.font = '24px system-ui, -apple-system, sans-serif';
   ctx.fillText('harpacrista.online', 80, height - 60);
-  return canvas.toDataURL('image/png');
+  return canvas;
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {

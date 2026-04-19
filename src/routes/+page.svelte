@@ -4,7 +4,7 @@
   import { base } from '$app/paths';
   import { browser } from '$app/environment';
   import { songs, favorites, recentlyViewed } from '$lib/stores.js';
-  import { getPreview, highlightMatch, searchSongs, hymnOfTheDay, encodeNumbers, decodeNumbers, haptic, dailyHymnImage } from '$lib/utils.js';
+  import { getPreview, highlightMatch, searchSongs, hymnOfTheDay, encodeNumbers, decodeNumbers, haptic, dailyHymnImage, shareOrDownloadCanvas } from '$lib/utils.js';
   import { audioCacheStatus, downloadAudios, clearAudioCache, refreshAudioCacheStatus } from '$lib/offline-audio.js';
   import { track } from '$lib/analytics.js';
   import { onMount, tick } from 'svelte';
@@ -95,20 +95,17 @@
     e.stopPropagation();
     if (!dailyHymn) return;
     try {
-      const dataUrl = dailyHymnImage(dailyHymn);
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `hino-do-dia-${dailyHymn.number}.png`, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Hino do dia — #${dailyHymn.number} ${dailyHymn.title}` });
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `hino-do-dia-${dailyHymn.number}.png`;
-        a.click();
-      }
-      track('daily_hymn_image_shared', { number: dailyHymn.number });
-    } catch {}
+      const canvas = dailyHymnImage(dailyHymn);
+      const result = await shareOrDownloadCanvas(
+        canvas,
+        `hino-do-dia-${dailyHymn.number}.png`,
+        `Hino do dia — #${dailyHymn.number} ${dailyHymn.title}`
+      );
+      track('daily_hymn_image_shared', { number: dailyHymn.number, method: result.method });
+    } catch (err) {
+      console.error('Erro ao compartilhar imagem:', err);
+      alert('Não foi possível gerar a imagem. ' + (err?.message || ''));
+    }
   }
 
   async function shareFavorites() {

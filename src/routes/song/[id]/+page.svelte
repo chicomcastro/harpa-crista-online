@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { base } from '$app/paths';
   import { songs, favorites, fontSize, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
-  import { parseVerses, shareSong, verseToImage, haptic } from '$lib/utils.js';
+  import { parseVerses, shareSong, verseToImage, haptic, shareOrDownloadCanvas } from '$lib/utils.js';
   import { track } from '$lib/analytics.js';
 
   let shareTooltip = $state('');
@@ -64,29 +64,24 @@
   async function shareVerseImage(verse) {
     if (!song) return;
     try {
-      const dataUrl = verseToImage({
+      const canvas = verseToImage({
         title: song.title,
         number: song.number,
         lines: verse.lines,
         darkMode: $darkMode
       });
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `harpa-${song.number}.png`, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Harpa Cristã #${song.number}` });
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `harpa-${song.number}.png`;
-        a.click();
-      }
+      const result = await shareOrDownloadCanvas(
+        canvas,
+        `harpa-${song.number}.png`,
+        `Harpa Cristã #${song.number}`
+      );
       imageStatus = 'Imagem pronta!';
-      track('verse_image_shared', { number: song.number });
+      track('verse_image_shared', { number: song.number, method: result.method });
       setTimeout(() => imageStatus = '', 2000);
     } catch (err) {
-      imageStatus = 'Erro ao gerar imagem.';
-      setTimeout(() => imageStatus = '', 2000);
+      console.error('Erro ao gerar imagem:', err);
+      imageStatus = 'Erro: ' + (err?.message || 'ao gerar imagem');
+      setTimeout(() => imageStatus = '', 3000);
     }
   }
 
