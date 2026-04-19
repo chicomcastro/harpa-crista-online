@@ -25,6 +25,7 @@
   let searchInput;
   let importStatus = $state('');
   let showShareFavs = $state(false);
+  let toast = $state('');
 
   const dailyHymn = $derived(hymnOfTheDay(songs));
   const recentSongs = $derived($recentlyViewed.map(n => songs.find(s => s.number === n)).filter(Boolean).slice(0, 6));
@@ -102,9 +103,12 @@
         `Hino do dia — #${dailyHymn.number} ${dailyHymn.title}`
       );
       track('daily_hymn_image_shared', { number: dailyHymn.number, method: result.method });
+      toast = result.method === 'clipboard' ? 'Imagem copiada!' : result.method === 'download' ? 'Imagem baixada' : 'Compartilhado!';
+      setTimeout(() => toast = '', 2000);
     } catch (err) {
       console.error('Erro ao compartilhar imagem:', err);
-      alert('Não foi possível gerar a imagem. ' + (err?.message || ''));
+      toast = 'Erro ao gerar imagem';
+      setTimeout(() => toast = '', 3000);
     }
   }
 
@@ -343,3 +347,9 @@
     </div>
   {/if}
 </div>
+
+{#if toast}
+  <div class="fixed left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 z-50 px-4 py-2 rounded-lg bg-gray-900/95 dark:bg-gray-100 text-white dark:text-gray-900 text-sm shadow-lg backdrop-blur">
+    {toast}
+  </div>
+{/if}

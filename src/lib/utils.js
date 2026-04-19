@@ -153,21 +153,51 @@ export function decodePlaylist(str) {
   } catch { return null; }
 }
 
-/** Share a canvas as PNG, using Web Share API (with file) or blob download fallback. */
+/** Copy a PNG Blob to the OS clipboard. */
+async function copyBlobToClipboard(blob) {
+  if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+    throw new Error('Clipboard não suporta imagens');
+  }
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+}
+
+/**
+ * Share a canvas as PNG. Tries in order:
+ *   1. Web Share API (with File) — if the user cancels, fall through to clipboard.
+ *   2. Copy to clipboard.
+ *   3. Download as blob URL.
+ * Resolves with { method: 'share' | 'clipboard' | 'download' }.
+ */
 export function shareOrDownloadCanvas(canvas, filename, title) {
   return new Promise((resolve, reject) => {
     if (!canvas?.toBlob) return reject(new Error('Canvas não suportado'));
     canvas.toBlob(async (blob) => {
       if (!blob) return reject(new Error('Falha ao gerar PNG'));
-      try {
-        const file = new File([blob], filename, { type: 'image/png' });
-        if (navigator.canShare?.({ files: [file] })) {
-          try { await navigator.share({ files: [file], title }); }
-          catch (err) {
-            if (err?.name !== 'AbortError') throw err;
-          }
+      const file = new File([blob], filename, { type: 'image/png' });
+
+      // 1) Web Share
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title });
           return resolve({ method: 'share' });
+        } catch (err) {
+          if (err?.name !== 'AbortError') {
+            // Real error — fall through to clipboard
+          }
+          // Both cancel and real error fall through
         }
+      }
+
+      // 2) Clipboard
+      try {
+        await copyBlobToClipboard(blob);
+        return resolve({ method: 'clipboard' });
+      } catch {
+        // fall through
+      }
+
+      // 3) Download
+      try {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -177,7 +207,9 @@ export function shareOrDownloadCanvas(canvas, filename, title) {
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 2000);
         resolve({ method: 'download' });
-      } catch (err) { reject(err); }
+      } catch (err) {
+        reject(err);
+      }
     }, 'image/png');
   });
 }

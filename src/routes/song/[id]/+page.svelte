@@ -75,7 +75,7 @@
         `harpa-${song.number}.png`,
         `Harpa Cristã #${song.number}`
       );
-      imageStatus = 'Imagem pronta!';
+      imageStatus = result.method === 'clipboard' ? 'Imagem copiada!' : result.method === 'download' ? 'Imagem baixada' : 'Compartilhado!';
       track('verse_image_shared', { number: song.number, method: result.method });
       setTimeout(() => imageStatus = '', 2000);
     } catch (err) {
@@ -392,9 +392,6 @@
           </button>
         </div>
       {/each}
-      {#if imageStatus}
-        <p class="text-xs text-brand-600 dark:text-brand-400 mt-2">{imageStatus}</p>
-      {/if}
     </div>
 
     <!-- Notes -->
@@ -458,6 +455,12 @@
     </p>
   </div>
   </div>
+
+  {#if imageStatus}
+    <div class="fixed left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 z-50 px-4 py-2 rounded-lg bg-gray-900/95 dark:bg-gray-100 text-white dark:text-gray-900 text-sm shadow-lg backdrop-blur">
+      {imageStatus}
+    </div>
+  {/if}
 {:else}
   <div class="container mx-auto px-4 py-16 text-center">
     <p class="text-xl text-gray-500 dark:text-gray-400">Hino não encontrado</p>
