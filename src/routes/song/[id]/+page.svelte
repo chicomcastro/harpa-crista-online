@@ -374,7 +374,7 @@
             target="_blank"
             rel="noreferrer"
             onclick={() => track('external_chord_opened', { number: song.number })}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900 border border-brand-200 dark:border-brand-900"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-gray-900 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-gray-800"
           >
             <span class="mi mi-sm">music_note</span> Ver cifra ↗
           </a>
@@ -385,7 +385,7 @@
             target="_blank"
             rel="noreferrer"
             onclick={() => track('external_sheet_opened', { number: song.number })}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 border border-purple-200 dark:border-purple-900"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-gray-900 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-gray-800"
           >
             <span class="mi mi-sm">library_music</span> Ver partitura ↗
           </a>

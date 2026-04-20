@@ -112,7 +112,7 @@
   </footer>
 
   <!-- Mobile bottom nav -->
-  <nav class="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 safe-bottom">
+  <nav class="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800">
     <div class="grid grid-cols-3 h-16">
       <a href="{base}/" class="flex flex-col items-center justify-center gap-0.5 text-xs {isHinos ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'}">
         <span class="mi {isHinos ? 'mi-filled' : ''}">library_music</span>
