@@ -12,10 +12,10 @@
 </script>
 
 <svelte:head>
-  <title>Harpa Cristã Online — 640 hinos grátis, offline e sem anúncios</title>
-  <meta name="description" content="O hinário da Harpa Cristã completo no seu bolso. 640 hinos com busca, áudio, modo apresentação, listas de culto e funcionamento offline. Grátis, sem login, sem anúncios." />
+  <title>Harpa Cristã Online — 640 hinos grátis no seu celular</title>
+  <meta name="description" content="Todos os 640 hinos da Harpa Cristã no seu celular. Com áudio, letra grande pra projetar e busca pra achar qualquer hino em segundos. Grátis e sem anúncios." />
   <meta property="og:title" content="Harpa Cristã Online — 640 hinos" />
-  <meta property="og:description" content="Todos os 640 hinos num app rápido, offline e sem anúncios. Feito para o culto real." />
+  <meta property="og:description" content="Todos os 640 hinos no seu celular. Com áudio, busca e letra grande pra projetar. Grátis e sem anúncios." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://chicomcastro.github.io/harpa-crista-online/inicio" />
   <link rel="canonical" href="https://chicomcastro.github.io/harpa-crista-online/inicio" />
@@ -29,25 +29,25 @@
     <!-- Hero -->
     <section class="pt-10 sm:pt-20 pb-16 text-center">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-gray-900 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-400 text-xs font-semibold uppercase tracking-widest mb-6 shadow-sm">
-        <span class="mi mi-sm">music_note</span> 640 hinos · grátis · offline
+        <span class="mi mi-sm">music_note</span> 640 hinos · grátis · sem internet
       </div>
       <h1 class="text-4xl sm:text-6xl font-bold text-gray-900 dark:text-gray-50 leading-tight mb-5 tracking-tight">
         A Harpa Cristã<br/>
-        <span class="bg-gradient-to-r from-brand-600 to-purple-600 dark:from-brand-400 dark:to-purple-400 bg-clip-text text-transparent">que o seu culto merece</span>
+        <span class="bg-gradient-to-r from-brand-600 to-purple-600 dark:from-brand-400 dark:to-purple-400 bg-clip-text text-transparent">sempre com você</span>
       </h1>
       <p class="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
-        Todos os 640 hinos num app rápido, com busca inteligente, áudio, modo apresentação e funcionamento offline. Sem login, sem anúncios.
+        Todos os 640 hinos no seu celular. Com áudio pra ouvir, letra grande pra projetar e busca pra achar qualquer hino em segundos.
       </p>
       <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
         <a href="{base}/" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold transition-all shadow-lg shadow-brand-600/20 hover:shadow-brand-600/40 hover:-translate-y-0.5">
           Abrir o hinário →
         </a>
         <a href="#instalar" class="w-full sm:w-auto px-8 py-4 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold hover:border-brand-400 dark:hover:border-brand-600 transition-colors">
-          Instalar no celular
+          Como colocar no celular
         </a>
       </div>
       <p class="mt-6 text-sm text-gray-400 dark:text-gray-500">
-        Não precisa baixar da loja. Abre direto no navegador.
+        Não precisa baixar na loja. É só abrir o link.
       </p>
     </section>
 
@@ -55,18 +55,18 @@
     <section class="mb-24">
       <div class="grid sm:grid-cols-3 gap-4">
         <div class="sm:col-span-2 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 relative overflow-hidden">
-          <div class="text-xs uppercase tracking-wider text-brand-600 dark:text-brand-400 font-semibold mb-2">Busca instantânea</div>
+          <div class="text-xs uppercase tracking-wider text-brand-600 dark:text-brand-400 font-semibold mb-2">Achar hino é fácil</div>
           <div class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3">"Hino 47"? "Castelo forte"? "Graça sublime"?</div>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Digite o número, o título, ou um verso que lembrar — e Enter. Vai direto pro hino certo, sem mais de um toque.</p>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Digite o número, o nome ou um pedacinho da letra que você lembrar. O hino abre na hora.</p>
           <div class="mt-5 p-3 rounded-xl bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 flex items-center gap-3">
             <span class="mi text-gray-400">search</span>
             <span class="text-sm text-gray-400">graça sublime</span>
           </div>
         </div>
         <div class="p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-          <div class="text-xs uppercase tracking-wider text-purple-600 dark:text-purple-400 font-semibold mb-2">Modo apresentação</div>
-          <div class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3">Fonte gigante. Verso a verso.</div>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Coro se repete automaticamente. Fullscreen, swipe, setas no teclado.</p>
+          <div class="text-xs uppercase tracking-wider text-purple-600 dark:text-purple-400 font-semibold mb-2">Pra projetar no culto</div>
+          <div class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3">Letra grande, verso por verso.</div>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">O coro aparece sozinho depois de cada estrofe. Dá pra passar com o dedo ou com as setas do teclado.</p>
           <div class="mt-5 h-16 rounded-xl bg-gray-900 dark:bg-black text-gray-100 flex items-center justify-center text-sm font-serif">
             Castelo forte é nosso Deus
           </div>
@@ -76,19 +76,19 @@
 
     <!-- Features grid -->
     <section class="mb-24">
-      <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-50 text-center mb-3">Feito pro culto real</h2>
-      <p class="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-xl mx-auto">Não é uma conversão de PDF nem app cheio de anúncio. É uma ferramenta pensada pra quem canta, rege, projeta e acompanha no banco.</p>
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-50 text-center mb-3">Pensado pro dia a dia da igreja</h2>
+      <p class="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-xl mx-auto">Feito pra quem canta no banco, pra quem rege o coral, pra quem projeta no telão. Simples de usar, sem enrolação.</p>
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {#each [
-          { icon: 'bolt', title: 'Abre em milissegundos', body: 'App leve e estático. Carrega instantâneo mesmo em 3G.' },
-          { icon: 'cloud_off', title: 'Funciona offline', body: 'Depois da primeira visita, abre sem internet. Igreja com sinal ruim? Tranquilo.' },
-          { icon: 'queue_music', title: 'Listas de culto', body: 'Monte a ordem da semana, compartilhe o link com a equipe. Sem cadastro.' },
-          { icon: 'present_to_all', title: 'Modo apresentação', body: 'Projete o hino com fonte grande, fundo escuro. Coro automático.' },
-          { icon: 'favorite', title: 'Favoritos com você', body: 'Salvos no seu aparelho. Exporte via link pra outro dispositivo.' },
-          { icon: 'headphones', title: 'Áudio embutido', body: 'Cada hino tem um player com áudio instrumental (quando disponível).' },
-          { icon: 'image', title: 'Imagem pra stories', body: 'Qualquer verso vira PNG pronto pra WhatsApp, Instagram e Stories.' },
-          { icon: 'dark_mode', title: 'Modo escuro', body: 'Segue sua preferência de sistema ou ajuste manual.' },
-          { icon: 'lock_open', title: 'Código aberto', body: 'Sem tracking invasivo, sem login, sem anúncios. Para sempre.' }
+          { icon: 'bolt', title: 'Abre rapidinho', body: 'Carrega na hora, mesmo quando a internet tá lenta.' },
+          { icon: 'cloud_off', title: 'Funciona sem internet', body: 'Depois que você abre pela primeira vez, ele continua funcionando mesmo sem sinal. Igreja no interior? Sem problema.' },
+          { icon: 'queue_music', title: 'Monte a ordem do culto', body: 'Organize os hinos da semana e envie o link pra equipe. Não precisa criar conta.' },
+          { icon: 'present_to_all', title: 'Projete no telão', body: 'Letra gigante, fundo escuro, um verso de cada vez. O coro já aparece sozinho.' },
+          { icon: 'favorite', title: 'Seus hinos favoritos', body: 'Marque os que você mais canta. Ficam salvos no seu celular.' },
+          { icon: 'headphones', title: 'Ouça o hino', body: 'Cada hino tem o áudio pra você acompanhar a melodia.' },
+          { icon: 'image', title: 'Compartilhe como imagem', body: 'Transforme qualquer verso numa imagem bonita pra enviar no WhatsApp ou postar nos Stories.' },
+          { icon: 'dark_mode', title: 'Modo escuro', body: 'Mais confortável pra ler à noite ou em ambientes sem muita luz.' },
+          { icon: 'lock_open', title: 'Sem pegadinhas', body: 'Sem assinatura, sem anúncio, sem cadastro. E continua assim pra sempre.' }
         ] as f}
           <div class="p-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-brand-300 dark:hover:border-brand-700 transition-colors">
             <span class="mi mi-lg text-brand-600 dark:text-brand-400 mb-3 block">{f.icon}</span>
@@ -104,9 +104,9 @@
       <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-50 text-center mb-10">Em 30 segundos</h2>
       <div class="grid sm:grid-cols-3 gap-6">
         {#each [
-          { n: '1', title: 'Abre o app', body: 'Direto no navegador. Nada pra baixar, nenhum cadastro.' },
-          { n: '2', title: 'Encontra o hino', body: 'Busca por número, título ou um pedaço da letra que lembrar.' },
-          { n: '3', title: 'Canta, projeta ou compartilha', body: 'Modo apresentação pra reger, imagem pra stories, lista pra equipe.' }
+          { n: '1', title: 'Abre o link', body: 'Não precisa baixar nada nem criar conta. É só clicar e usar.' },
+          { n: '2', title: 'Acha seu hino', body: 'Pesquise pelo número, pelo nome ou por um trecho que você lembrar.' },
+          { n: '3', title: 'Cante, projete, compartilhe', body: 'Use no culto, mande pro grupo da igreja ou guarde nos favoritos.' }
         ] as step}
           <div class="text-center">
             <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-600 text-white font-bold text-lg mb-4">{step.n}</div>
@@ -121,10 +121,10 @@
     <section id="instalar" class="mb-24 p-8 sm:p-12 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-900 dark:to-black text-white">
       <div class="max-w-2xl">
         <div class="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-brand-300 font-semibold mb-3">
-          <span class="mi mi-sm">install_mobile</span> Instalar como app
+          <span class="mi mi-sm">install_mobile</span> Coloque no celular
         </div>
-        <h2 class="text-3xl font-bold mb-4">Adicione à tela inicial</h2>
-        <p class="text-gray-300 mb-8">Depois de instalado, abre direto como um app nativo — sem barra do navegador, sem perder tempo digitando URL.</p>
+        <h2 class="text-3xl font-bold mb-4">Fica igualzinho a um app</h2>
+        <p class="text-gray-300 mb-8">Depois de adicionar à tela inicial, vira um atalho bonito como qualquer outro app. Toca no ícone e já abre o hinário.</p>
 
         <div class="grid sm:grid-cols-2 gap-6">
           <div class="p-5 rounded-xl bg-white/5 border border-white/10">
@@ -162,10 +162,10 @@
       <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-50 text-center mb-10">Nossos princípios</h2>
       <div class="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
         {#each [
-          { title: 'Gratuito pra sempre', body: 'Sem assinatura, sem paywall, sem "versão premium".' },
-          { title: 'Sem anúncios', body: 'Nada de banner, popup ou vídeo interrompendo o culto.' },
-          { title: 'Sem cadastro', body: 'Seus favoritos e listas ficam no seu aparelho, não num servidor.' },
-          { title: 'Código aberto', body: 'Todo o código está no GitHub. Sugestões e contribuições bem-vindas.' }
+          { title: 'Grátis pra sempre', body: 'Você não paga nada. Nem agora, nem depois.' },
+          { title: 'Sem anúncios', body: 'Nada de propaganda atrapalhando na hora do louvor.' },
+          { title: 'Sem cadastro', body: 'Não precisa criar conta, não pedimos seu e-mail. Seus favoritos ficam no seu celular.' },
+          { title: 'Aberto à comunidade', body: 'É um projeto independente. Sugestões e ajuda são bem-vindas.' }
         ] as p}
           <div class="flex gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-900">
             <span class="mi text-green-600 dark:text-green-400 shrink-0">check_circle</span>
@@ -180,8 +180,8 @@
 
     <!-- Final CTA -->
     <section class="mb-20 text-center p-10 sm:p-16 rounded-2xl border border-brand-200 dark:border-brand-800 bg-gradient-to-br from-brand-50 to-purple-50 dark:from-brand-950/40 dark:to-purple-950/40">
-      <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-50 mb-3">Pronto pra começar?</h2>
-      <p class="text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto">640 hinos. Grátis. Funciona offline. É só abrir.</p>
+      <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-50 mb-3">Pronto pra cantar?</h2>
+      <p class="text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto">640 hinos no seu bolso. Grátis. É só abrir e começar.</p>
       <a href="{base}/" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold transition-all shadow-lg shadow-brand-600/20 hover:shadow-brand-600/40 hover:-translate-y-0.5">
         Abrir Harpa Cristã →
       </a>
