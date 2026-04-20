@@ -2,7 +2,7 @@
 
 Todos os 640 hinos da Harpa Cristã em uma aplicação web leve, rápida e offline-first.
 
-**[Acesse aqui](https://chicomcastro.github.io/harpa-crista-online/)**
+**[Página inicial](https://chicomcastro.github.io/harpa-crista-online/inicio)** · **[Abrir o app](https://chicomcastro.github.io/harpa-crista-online/)**
 
 ## Funcionalidades
 

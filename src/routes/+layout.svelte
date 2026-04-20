@@ -9,6 +9,8 @@
 
   let { children } = $props();
   const isPresenting = $derived($page.url.pathname.endsWith('/present'));
+  const isLanding = $derived($page.url.pathname.endsWith('/inicio'));
+  const hideChrome = $derived(isPresenting || isLanding);
   const path = $derived($page.url.pathname);
   const favsParam = $derived(browser ? $page.url.searchParams.get('favs') : null);
   const isHinos = $derived((path === base + '/' || path === base || path === '/') && favsParam !== '1');
@@ -67,7 +69,7 @@
 </svelte:head>
 
 <div class="min-h-screen flex flex-col">
-  {#if !isPresenting}
+  {#if !hideChrome}
   <header class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 safe-top">
     <div class="container mx-auto px-4 h-14 flex items-center justify-between">
       <a href="{base}/" class="flex items-center gap-2 font-bold text-lg text-brand-700 dark:text-brand-400">
@@ -100,11 +102,11 @@
   </header>
   {/if}
 
-  <main class="flex-1 {!isPresenting ? 'pb-16 sm:pb-0' : ''}">
+  <main class="flex-1 {!hideChrome ? 'pb-16 sm:pb-0' : ''}">
     {@render children()}
   </main>
 
-  {#if !isPresenting}
+  {#if !hideChrome}
   <footer class="hidden sm:flex items-center justify-center gap-3 text-xs text-gray-400 dark:text-gray-600 py-4">
     <span>Harpa Cristã Online — 640 hinos</span>
     <span>·</span>
@@ -130,7 +132,7 @@
   </nav>
   {/if}
 
-  {#if !isPresenting && showToTop}
+  {#if !hideChrome && showToTop}
     <button
       onclick={scrollToTop}
       style="bottom: max(5rem, calc(env(safe-area-inset-bottom) + 5rem));"

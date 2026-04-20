@@ -8,6 +8,7 @@ const BASE = '/harpa-crista-online';
 export function GET() {
   const urls = [
     { loc: `${SITE}${BASE}/`, priority: 1.0, changefreq: 'daily' },
+    { loc: `${SITE}${BASE}/inicio`, priority: 0.9, changefreq: 'monthly' },
     { loc: `${SITE}${BASE}/sobre`, priority: 0.5, changefreq: 'monthly' },
     { loc: `${SITE}${BASE}/playlists`, priority: 0.4, changefreq: 'weekly' },
     ...songs.map(s => ({
