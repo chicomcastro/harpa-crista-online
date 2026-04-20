@@ -201,12 +201,7 @@
       <div class="mb-6">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold">Vistos recentemente</h2>
-          <div class="flex items-center gap-3">
-            {#if $recentlyViewed.length > recentSongs.length}
-              <a href="{base}/recentes" class="text-xs text-brand-600 dark:text-brand-400 hover:underline">Ver tudo</a>
-            {/if}
-            <button onclick={() => recentlyViewed.clear()} class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Limpar</button>
-          </div>
+          <a href="{base}/recentes" class="text-xs text-brand-600 dark:text-brand-400 hover:underline">Ver tudo</a>
         </div>
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
           {#each recentSongs as song (song.id)}

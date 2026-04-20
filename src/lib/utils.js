@@ -306,11 +306,12 @@ export const VERSE_FORMATS = [
   { id: 'square', name: 'Post', w: 1080, h: 1080 }
 ];
 
-/** Render a verse to a canvas using the selected template and format. */
-export function verseToImage({ title, number, lines }, template = 'cream', format = 'story') {
+/** Render a verse to a canvas using the selected template, format and optional font scale. */
+export function verseToImage({ title, number, lines }, template = 'cream', format = 'story', scale = 1) {
   const fmt = VERSE_FORMATS.find(f => f.id === format) || VERSE_FORMATS[0];
   const W = fmt.w, H = fmt.h;
   const isSquare = format === 'square';
+  const padX = 80;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -319,16 +320,20 @@ export function verseToImage({ title, number, lines }, template = 'cream', forma
   const pal = getVersePalette(template);
   paintBackground(ctx, W, H, pal);
 
-  // Optional decorative quote mark
+  // Decorative quote marks (subtle, top-left and bottom-right of the canvas)
   if (pal.showQuote) {
+    const qSize = isSquare ? 220 : 300;
     ctx.fillStyle = pal.quote;
-    ctx.font = `bold ${isSquare ? 420 : 700}px Georgia, serif`;
-    ctx.textAlign = 'left';
+    ctx.font = `bold ${qSize}px Georgia, serif`;
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText('\u201C', isSquare ? 20 : 40, isSquare ? 360 : 580);
+    // Opening — high up, just below the header
+    ctx.textAlign = 'left';
+    ctx.fillText('\u201C', 30, isSquare ? 420 : 620);
+    // Closing — near the bottom, above the brand footer
+    ctx.textAlign = 'right';
+    ctx.fillText('\u201D', W - 30, H - (isSquare ? 70 : 100));
   }
 
-  const padX = 80;
   const badgeSize = isSquare ? 24 : 30;
   const titleSize = isSquare ? 42 : 56;
   const badgeY = isSquare ? 90 : 130;
@@ -352,33 +357,56 @@ export function verseToImage({ title, number, lines }, template = 'cream', forma
     ctx.fillRect(padX, dividerY, 72, 3);
   }
 
-  // Verse — centered. Strip leading "1. ", "2. " etc.
-  const cleanLines = lines.map(l => l.replace(/^\s*\d+\.\s*/, ''));
+  // Strip "1. " prefixes
+  const cleanLines = lines.map(l => l.replace(/^\s*\d+\.\s*/, '')).filter(Boolean);
+
+  // Reserve fixed zones → predictable layout
+  const footerH = isSquare ? 110 : 160;
+  const verseTop = dividerY + (isSquare ? 40 : 70);
+  const verseBottom = H - footerH;
+  const verseAreaH = verseBottom - verseTop;
+  const verseAreaW = W - padX * 2;
+
+  // Auto-fit font: pick the largest size (within caps) that fits both width and height
+  const maxFont = isSquare ? 64 : 80;
+  const minFont = isSquare ? 28 : 34;
+  let autoFit = minFont;
+  for (let s = maxFont; s >= minFont; s -= 2) {
+    ctx.font = `400 ${s}px Georgia, serif`;
+    const w = cleanLines.map(l => computeWrap(ctx, l, verseAreaW));
+    const lh = Math.round(s * 1.45);
+    const rows = w.reduce((acc, r) => acc + r.length, 0);
+    const gaps = (cleanLines.length - 1) * (lh * 0.35);
+    const h = rows * lh + gaps;
+    if (h <= verseAreaH) { autoFit = s; break; }
+    autoFit = s; // fallback: smallest if nothing fits
+  }
+
+  // Apply user scale, clamp to sensible range
+  let fontSize = Math.round(autoFit * (scale || 1));
+  fontSize = Math.max(20, Math.min(maxFont + 20, fontSize));
+  ctx.font = `400 ${fontSize}px Georgia, serif`;
+  const wrapped = cleanLines.map(l => computeWrap(ctx, l, verseAreaW));
+  const lineH = Math.round(fontSize * 1.45);
+  const rows = wrapped.reduce((acc, r) => acc + r.length, 0);
+  const gaps = (cleanLines.length - 1) * (lineH * 0.35);
+  const blockH = rows * lineH + gaps;
+
+  // Vertically center in reserved area
   ctx.fillStyle = pal.ink;
   ctx.textAlign = 'center';
-  const totalChars = cleanLines.reduce((s, l) => s + l.length, 0);
-  let base = isSquare ? 52 : 64;
-  if (totalChars > 140) base -= 8;
-  if (totalChars > 200) base -= 8;
-  if (totalChars > 280) base -= 6;
-  const fontSize = Math.max(isSquare ? 32 : 38, base);
   ctx.font = `400 ${fontSize}px Georgia, serif`;
-  const lineH = Math.round(fontSize * 1.5);
-  const wrapped = cleanLines.map(l => computeWrap(ctx, l, W - 200));
-  const totalRows = wrapped.reduce((s, r) => s + r.length, 0) + (cleanLines.length - 1) * 0.5;
-  const blockH = totalRows * lineH;
-  const verseMinY = dividerY + (isSquare ? 60 : 100);
-  let y = Math.max(verseMinY, (H - blockH) / 2);
+  let y = verseTop + (verseAreaH - blockH) / 2 + fontSize; // fontSize ≈ baseline offset
   for (const rows of wrapped) {
     for (const r of rows) { ctx.fillText(r, W / 2, y); y += lineH; }
-    y += lineH * 0.5;
+    y += lineH * 0.35;
   }
 
   // Footer
   ctx.textAlign = 'left';
   ctx.fillStyle = pal.dim;
   ctx.font = `500 ${isSquare ? 22 : 28}px system-ui, -apple-system, Inter, sans-serif`;
-  ctx.fillText('chicomcastro.github.io/harpa-crista-online', padX, H - (isSquare ? 60 : 90));
+  ctx.fillText('chicomcastro.github.io/harpa-crista-online', padX, H - (isSquare ? 55 : 80));
 
   return canvas;
 }

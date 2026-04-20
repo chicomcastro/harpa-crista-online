@@ -9,10 +9,13 @@
 <svelte:head><title>Vistos recentemente — Harpa Cristã Online</title></svelte:head>
 
 <div class="container mx-auto px-4 py-6 max-w-5xl">
-  <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Vistos recentemente</h1>
+  <div class="flex items-center gap-2 mb-6">
+    <a href="{base}/" class="btn-icon shrink-0 text-gray-500 dark:text-gray-400 -ml-2" aria-label="Voltar">
+      <span class="mi">arrow_back</span>
+    </a>
+    <h1 class="flex-1 text-lg sm:text-2xl font-semibold text-gray-800 dark:text-gray-100 truncate">Vistos recentemente</h1>
     {#if items.length > 0}
-      <button onclick={() => recentlyViewed.clear()} class="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Limpar tudo</button>
+      <button onclick={() => recentlyViewed.clear()} class="shrink-0 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Limpar tudo</button>
     {/if}
   </div>
 

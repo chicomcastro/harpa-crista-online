@@ -9,6 +9,7 @@
 
   let template = $state('cream');
   let format = $state('story');
+  let scale = $state(1);
   let previewDataUrl = $state('');
   let sharing = $state(false);
   let dragY = $state(0);
@@ -33,21 +34,21 @@
 
   $effect(() => {
     if (!open) return;
-    const canvas = verseToImage({ title, number, lines }, template, format);
+    const canvas = verseToImage({ title, number, lines }, template, format, scale);
     previewDataUrl = canvas.toDataURL('image/png');
   });
 
   $effect(() => {
-    if (open) { template = 'cream'; format = 'story'; }
+    if (open) { template = 'cream'; format = 'story'; scale = 1; }
   });
 
   async function confirm() {
     if (sharing) return;
     sharing = true;
     try {
-      const canvas = verseToImage({ title, number, lines }, template, format);
+      const canvas = verseToImage({ title, number, lines }, template, format, scale);
       const result = await shareOrDownloadCanvas(canvas, filename, shareTitle);
-      track(eventName, { number, method: result.method, template, format });
+      track(eventName, { number, method: result.method, template, format, scale });
       onShared?.(result.method);
       onClose();
     } catch (err) {
@@ -119,6 +120,26 @@
         {#if previewDataUrl}
           <img src={previewDataUrl} alt="Preview da imagem" class="w-full h-full object-contain" />
         {/if}
+      </div>
+
+      <!-- Font size slider -->
+      <div class="flex items-center gap-3 mb-4 px-1">
+        <span class="mi mi-sm text-gray-400">remove</span>
+        <input
+          type="range"
+          min="0.6"
+          max="1.5"
+          step="0.05"
+          bind:value={scale}
+          class="flex-1 accent-brand-600"
+          aria-label="Tamanho da fonte"
+        />
+        <span class="mi text-gray-400">add</span>
+        <button
+          onclick={() => scale = 1}
+          class="text-xs text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 w-10 text-right"
+          aria-label="Redefinir tamanho"
+        >{Math.round(scale * 100)}%</button>
       </div>
 
       <div class="flex gap-2">
