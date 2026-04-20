@@ -29,9 +29,10 @@
 
   $effect(() => {
     if (!titleEl) return;
+    const headerH = (document.querySelector('header')?.offsetHeight) || 56;
     const obs = new IntersectionObserver(
       ([entry]) => { titleVisible = entry.isIntersecting; },
-      { rootMargin: '-56px 0px 0px 0px' }
+      { rootMargin: `-${headerH}px 0px 0px 0px` }
     );
     obs.observe(titleEl);
     return () => obs.disconnect();
@@ -203,7 +204,7 @@
   <div ontouchstart={onTouchStart} ontouchend={onTouchEnd} role="presentation">
   <!-- Mini sticky header (iOS-style) -->
   <div
-    class="sticky top-14 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-all duration-200 {titleVisible ? 'opacity-0 -translate-y-2 pointer-events-none h-0 border-b-0' : 'opacity-100 translate-y-0'}"
+    class="fixed left-0 right-0 top-14 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-transform duration-200 will-change-transform {titleVisible ? '-translate-y-full pointer-events-none' : 'translate-y-0'}"
     aria-hidden={titleVisible}
   >
     <div class="container mx-auto px-4 max-w-2xl h-12 flex items-center gap-3">
