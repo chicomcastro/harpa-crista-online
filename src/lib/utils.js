@@ -168,7 +168,7 @@ async function copyBlobToClipboard(blob) {
  *   3. Download as blob URL.
  * Resolves with { method: 'share' | 'clipboard' | 'download' }.
  */
-export function shareOrDownloadCanvas(canvas, filename, title) {
+export function shareOrDownloadCanvas(canvas, filename, title, caption) {
   return new Promise((resolve, reject) => {
     if (!canvas?.toBlob) return reject(new Error('Canvas não suportado'));
     canvas.toBlob(async (blob) => {
@@ -178,7 +178,9 @@ export function shareOrDownloadCanvas(canvas, filename, title) {
       // 1) Web Share
       if (navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title });
+          const payload = { files: [file], title };
+          if (caption) payload.text = caption;
+          await navigator.share(payload);
           return resolve({ method: 'share' });
         } catch (err) {
           if (err?.name !== 'AbortError') {
@@ -507,20 +509,20 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
  */
 export async function shareSong(number, title, baseUrl) {
   const url = `${baseUrl}/song/${number}`;
-  const text = `Harpa Cristã #${number} - ${title}`;
+  const heading = `Harpa Cristã #${number} — ${title}`;
+  const caption = `🎵 ${heading}\n\nAbra o hino: ${url}`;
 
   if (navigator.share) {
     try {
-      await navigator.share({ title: text, url });
+      await navigator.share({ title: heading, text: caption, url });
       return true;
     } catch {
       // User cancelled or error
     }
   }
 
-  // Fallback: copy to clipboard
   try {
-    await navigator.clipboard.writeText(`${text}\n${url}`);
+    await navigator.clipboard.writeText(caption);
     return true;
   } catch {
     return false;

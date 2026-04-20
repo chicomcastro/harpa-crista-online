@@ -4,8 +4,8 @@
   import { verseToImage, VERSE_TEMPLATES, VERSE_FORMATS, shareOrDownloadCanvas } from '$lib/utils.js';
   import { track } from '$lib/analytics.js';
 
-  /** @type {{ open: boolean, title: string, number: number, lines: string[], filename: string, shareTitle: string, eventName?: string, onClose: () => void, onShared?: (method: string) => void }} */
-  let { open, title, number, lines, filename, shareTitle, eventName = 'image_shared', onClose, onShared } = $props();
+  /** @type {{ open: boolean, title: string, number: number, lines: string[], filename: string, shareTitle: string, shareCaption?: string, eventName?: string, onClose: () => void, onShared?: (method: string) => void }} */
+  let { open, title, number, lines, filename, shareTitle, shareCaption, eventName = 'image_shared', onClose, onShared } = $props();
 
   let template = $state('cream');
   let format = $state('story');
@@ -47,7 +47,7 @@
     sharing = true;
     try {
       const canvas = verseToImage({ title, number, lines }, template, format, scale);
-      const result = await shareOrDownloadCanvas(canvas, filename, shareTitle);
+      const result = await shareOrDownloadCanvas(canvas, filename, shareTitle, shareCaption);
       track(eventName, { number, method: result.method, template, format, scale });
       onShared?.(result.method);
       onClose();

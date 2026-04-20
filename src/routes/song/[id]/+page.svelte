@@ -512,6 +512,7 @@
     lines={previewVerse?.lines || []}
     filename={`harpa-${song.number}.png`}
     shareTitle={`Harpa Cristã #${song.number}`}
+    shareCaption={`🎵 Harpa Cristã #${song.number} — ${song.title}\n\nAbra o hino: ${typeof window !== 'undefined' ? window.location.origin : 'https://chicomcastro.github.io'}${base}/song/${song.id}`}
     eventName="verse_image_shared"
     onClose={() => previewVerse = null}
     {onShared}

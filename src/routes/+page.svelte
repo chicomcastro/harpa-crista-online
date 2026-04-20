@@ -115,9 +115,10 @@
     if ($favorites.length === 0) return;
     const encoded = encodeNumbers($favorites);
     const url = `${window.location.origin}${base}/#favs=${encoded}`;
+    const caption = `⭐ Meus ${$favorites.length} hinos favoritos da Harpa Cristã\n\nAbra a lista: ${url}`;
     try {
-      if (navigator.share) await navigator.share({ title: 'Meus favoritos — Harpa Cristã', url });
-      else await navigator.clipboard.writeText(url);
+      if (navigator.share) await navigator.share({ title: 'Meus favoritos — Harpa Cristã', text: caption, url });
+      else await navigator.clipboard.writeText(caption);
       showShareFavs = true;
       track('favorites_shared', { count: $favorites.length });
       setTimeout(() => showShareFavs = false, 2000);
@@ -356,6 +357,7 @@
     lines={dailyPreviewLines}
     filename={`hino-do-dia-${dailyHymn.number}.png`}
     shareTitle={`Hino do dia — #${dailyHymn.number} ${dailyHymn.title}`}
+    shareCaption={`🎵 Hino do dia — Harpa Cristã #${dailyHymn.number} ${dailyHymn.title}\n\nAbra o hino: ${typeof window !== 'undefined' ? window.location.origin : 'https://chicomcastro.github.io'}${base}/song/${dailyHymn.id}`}
     eventName="daily_hymn_image_shared"
     onClose={() => dailyPreviewOpen = false}
     onShared={onDailyShared}

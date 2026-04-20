@@ -36,9 +36,10 @@
   async function share() {
     const encoded = encodePlaylist({ name: pl.name, numbers: pl.numbers });
     const url = `${window.location.origin}${base}/playlists#import=${encoded}`;
+    const caption = `🎶 Lista de hinos: ${pl.name} (${pl.numbers.length} ${pl.numbers.length === 1 ? 'hino' : 'hinos'})\n\nAbra a lista: ${url}`;
     try {
-      if (navigator.share) await navigator.share({ title: pl.name, url });
-      else await navigator.clipboard.writeText(url);
+      if (navigator.share) await navigator.share({ title: pl.name, text: caption, url });
+      else await navigator.clipboard.writeText(caption);
       shareStatus = 'Link copiado!';
       track('playlist_shared', { name: pl.name, count: pl.numbers.length });
       setTimeout(() => shareStatus = '', 2000);
