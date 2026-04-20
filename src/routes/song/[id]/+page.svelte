@@ -221,9 +221,9 @@
     </div>
   </div>
 
-  <div class="container mx-auto px-4 py-6 max-w-2xl">
+  <div class="container mx-auto px-4 py-3 max-w-2xl">
     <!-- Top bar -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-3">
       <button
         onclick={() => {
           if (history.length > 1) history.back();
@@ -357,18 +357,18 @@
     </div>
 
     <!-- Song header -->
-    <div class="mb-8" bind:this={titleEl}>
-      <div class="flex items-center gap-3">
-        <span class="shrink-0 w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-lg font-bold">
+    <div class="mb-4" bind:this={titleEl}>
+      <div class="flex items-center gap-2">
+        <span class="shrink-0 w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-base font-bold">
           {song.number}
         </span>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">{song.title}</h1>
+        <h1 class="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">{song.title}</h1>
       </div>
     </div>
 
     <!-- External curated links -->
     {#if externalLinks.chord || externalLinks.sheet}
-      <div class="flex flex-wrap gap-2 mb-6">
+      <div class="flex flex-wrap gap-2 mb-4">
         {#if externalLinks.chord}
           <a
             href={externalLinks.chord}
@@ -396,7 +396,7 @@
 
     <!-- Audio player -->
     {#if !audioError}
-      <div class="mb-8">
+      <div class="mb-4">
         <audio
           bind:this={audioEl}
           src={audioUrl}
