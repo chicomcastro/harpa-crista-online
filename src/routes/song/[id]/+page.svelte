@@ -4,6 +4,7 @@
   import { songs, favorites, fontSize, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
   import { parseVerses, shareSong, haptic } from '$lib/utils.js';
   import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
+  import curatedLinks from '../../../../data/links.json';
   import { track } from '$lib/analytics.js';
 
   let shareTooltip = $state('');
@@ -118,6 +119,7 @@
   const nextSong = $derived(songIndex < songs.length - 1 ? songs[songIndex + 1] : null);
   const verses = $derived(song ? parseVerses(song.content) : []);
   const isFavorite = $derived(song ? $favorites.includes(song.number) : false);
+  const externalLinks = $derived(song ? (curatedLinks[song.number] || {}) : {});
 
   async function handleShare() {
     if (!song) return;
@@ -362,6 +364,34 @@
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">{song.title}</h1>
       </div>
     </div>
+
+    <!-- External curated links -->
+    {#if externalLinks.chord || externalLinks.sheet}
+      <div class="flex flex-wrap gap-2 mb-6">
+        {#if externalLinks.chord}
+          <a
+            href={externalLinks.chord}
+            target="_blank"
+            rel="noreferrer"
+            onclick={() => track('external_chord_opened', { number: song.number })}
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900 border border-brand-200 dark:border-brand-900"
+          >
+            <span class="mi mi-sm">music_note</span> Ver cifra ↗
+          </a>
+        {/if}
+        {#if externalLinks.sheet}
+          <a
+            href={externalLinks.sheet}
+            target="_blank"
+            rel="noreferrer"
+            onclick={() => track('external_sheet_opened', { number: song.number })}
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 border border-purple-200 dark:border-purple-900"
+          >
+            <span class="mi mi-sm">library_music</span> Ver partitura ↗
+          </a>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Audio player -->
     {#if !audioError}
