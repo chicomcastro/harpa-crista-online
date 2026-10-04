@@ -587,7 +587,9 @@
 
     <div class={aba === 'letra' ? '' : 'hidden'}>
     <!-- Verses -->
-    <div class="song-content font-serif" style="font-size: {$fontSize}px; line-height: 1.7;">
+    <!-- max-w-2xl na própria letra: a coluna cresce até 5xl no desktop, e o botão de compartilhar,
+         ancorado na direita do verso, ficava solto a meia tela do texto. -->
+    <div class="song-content font-serif max-w-2xl" style="font-size: {$fontSize}px; line-height: 1.7;">
       {#each verses as verse, i}
         <div
           id="verse-{i}"
@@ -698,8 +700,11 @@
     </p>
     </div>
 
-    <!-- Painel de ferramentas do desktop (#6): o espaço que sobrava vira o que o músico usa tocando. -->
-    <aside class="hidden lg:block">
+    <!--
+      Painel de ferramentas do desktop (#6). Só na aba Letra: rolagem automática e tamanho de texto
+      não fazem nada numa pauta nem num vídeo, e um painel que não responde é pior que painel nenhum.
+    -->
+    <aside class="hidden {aba === 'letra' ? 'lg:block' : ''}">
       <div class="sticky top-20 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <h2 class="text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-3">Ferramentas</h2>
 
