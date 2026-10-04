@@ -13,12 +13,6 @@
 
   let shareTooltip = $state('');
   let copyTooltip = $state('');
-  // O player só aparece depois que o navegador confirma que existe áudio (ver #3). O bucket
-  // harpa.nyc3.digitaloceanspaces.com está fora desde ao menos 04/10/2026 (NoSuchBucket), então hoje
-  // isso esconde o player em todos os hinos — e volta a mostrar sozinho se o áudio voltar.
-  let audioPronto = $state(false);
-  let audioEl;
-  let activeVerse = $state(-1);
   let noteDraft = $state('');
   let showNotes = $state(false);
   let showPlaylistMenu = $state(false);
@@ -45,12 +39,6 @@
     return () => obs.disconnect();
   });
 
-  // Trocar de hino volta a esconder o player até o novo áudio responder.
-  $effect(() => {
-    $page.params.id;
-    audioPronto = false;
-  });
-
   $effect(() => {
     if (song) {
       track('song_viewed', { song_id: song.id, number: song.number, title: song.title });
@@ -62,25 +50,10 @@
       showSheet = false;   // troca de hino fecha na hora, sem animar
       folhaAberta = false;
       arrasto = 0;
-      tocandoAudio = false;
-      progresso = 0;
       noteDraft = $notes[song.number] || '';
       showNotes = !!$notes[song.number];
-      activeVerse = -1;
     }
   });
-
-  function onAudioTimeUpdate() {
-    if (!audioEl || !audioEl.duration || verses.length === 0) return;
-    const ratio = audioEl.currentTime / audioEl.duration;
-    progresso = ratio;
-    const idx = Math.min(verses.length - 1, Math.floor(ratio * verses.length));
-    if (idx !== activeVerse) {
-      activeVerse = idx;
-      const el = document.getElementById(`verse-${idx}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
 
   function saveNote() {
     if (!song) return;
@@ -132,7 +105,6 @@
   const songId = $derived(parseInt($page.params.id));
   const song = $derived(songs.find(s => s.id === songId) || null);
   const songIndex = $derived(song ? songs.indexOf(song) : -1);
-  const audioUrl = $derived(song ? `https://harpa.nyc3.digitaloceanspaces.com/${String(song.number).padStart(3, '0')}.mp3` : '');
   const prevSong = $derived(songIndex > 0 ? songs[songIndex - 1] : null);
   const nextSong = $derived(songIndex < songs.length - 1 ? songs[songIndex + 1] : null);
   const verses = $derived(song ? parseVerses(song.content) : []);
@@ -334,15 +306,6 @@
     tick().then(() => window.scrollTo({ top: nova === 'letra' ? scrollLetra : 0 }));
   }
   let showFonte = $state(false);
-  let tocandoAudio = $state(false);
-  let progresso = $state(0);
-
-  function alternarAudio() {
-    if (!audioEl) return;
-    if (audioEl.paused) audioEl.play().catch(() => {}); else audioEl.pause();
-    track('audio_toggled_bar', { number: song.number, playing: audioEl.paused });
-  }
-
   function abrirPartituraBarra() {
     fecharFolha();
     trocarAba('partitura');
@@ -605,25 +568,6 @@
     {/if}
 
     <div class={aba === 'letra' ? '' : 'hidden'}>
-    <!-- Audio player: montado sempre, visível só quando o arquivo responde (#3). -->
-    <div class="mb-4 {audioPronto ? 'hidden sm:block' : 'hidden'}">
-      <audio
-        bind:this={audioEl}
-        src={audioUrl}
-        controls
-        preload="metadata"
-        onloadedmetadata={() => audioPronto = true}
-        onplay={() => { tocandoAudio = true; track('audio_played', { number: song.number, title: song.title }); }}
-        onpause={() => tocandoAudio = false}
-        onended={() => { tocandoAudio = false; progresso = 0; }}
-        onerror={() => { audioPronto = false; track('audio_unavailable', { number: song.number }); }}
-        ontimeupdate={onAudioTimeUpdate}
-        class="w-full h-10 rounded-lg [&::-webkit-media-controls-panel]:bg-gray-100 dark:[&::-webkit-media-controls-panel]:bg-gray-800"
-      >
-        <track kind="captions" />
-      </audio>
-    </div>
-
     <!-- Verses -->
     <div class="song-content font-serif" style="font-size: {$fontSize}px; line-height: 1.7;">
       {#each verses as verse, i}
@@ -633,7 +577,7 @@
           tabindex="0"
           onclick={() => revealedVerse = revealedVerse === i ? -1 : i}
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); revealedVerse = revealedVerse === i ? -1 : i; } }}
-          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 cursor-pointer {activeVerse === i ? 'bg-brand-50/60 dark:bg-brand-950/40' : ''} {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700' : ''}"
+          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 cursor-pointer {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700' : ''}"
         >
           {#if verse.isChorus}
             <div class="text-[11px] uppercase tracking-widest text-brand-600 dark:text-brand-400 font-semibold font-sans mb-1">Refrão</div>
@@ -791,9 +735,6 @@
       </div>
     {/if}
     <div class="pointer-events-auto relative flex items-stretch px-1.5 py-1 rounded-2xl bg-gray-900/95 text-white shadow-xl ring-1 ring-white/15 backdrop-blur overflow-hidden">
-      {#if tocandoAudio || progresso > 0}
-        <span class="absolute top-0 left-0 h-0.5 bg-brand-400 transition-[width]" style="width: {progresso * 100}%"></span>
-      {/if}
       <button onclick={() => { showFonte = false; if (rolando) pararRolagem(); else alternarRolagem(); }} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {rolando ? 'text-brand-300' : ''}">
         <span class="mi">{rolando ? 'pause' : 'arrow_downward'}</span>Rolar
       </button>
@@ -803,11 +744,6 @@
       <a href="{base}/song/{song.id}/present" onclick={() => track('presentation_opened_nav', { number: song.number, from: 'bar' })} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5">
         <span class="mi">present_to_all</span>Palco
       </a>
-      {#if audioPronto}
-        <button onclick={alternarAudio} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {tocandoAudio ? 'text-brand-300' : ''}">
-          <span class="mi">{tocandoAudio ? 'pause' : 'headphones'}</span>{tocandoAudio ? 'Pausar' : 'Ouvir'}
-        </button>
-      {/if}
       <button onclick={() => { showSheet = true; showFonte = false; }} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5">
         <span class="mi">more_horiz</span>Opções
       </button>

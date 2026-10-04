@@ -90,7 +90,7 @@
     <div class="space-y-4">
       {#each [
         { q: 'Tem todos os 640 hinos?', a: 'Sim, a edição completa. Letras revisadas.' },
-        { q: 'Tem os áudios?', a: 'Sim, cada hino tem um player com o áudio instrumental (quando disponível).' },
+        { q: 'Tem os áudios?', a: 'Hoje não. O servidor onde os MP3 ficavam saiu do ar e os arquivos se perderam. Nos 28 hinos que têm partitura dá para ouvir pelo vídeo do canal Harpa Cristã Partituras, com a pauta rolando junto.' },
         { q: 'E as cifras/partituras?', a: 'Ainda não integradas. No roadmap. Por enquanto, a página do hino traz link para partitura em PDF (quando existe fonte aberta).' },
         { q: 'Precisa baixar da loja?', a: 'Não — abre no navegador. No celular, use "Adicionar à tela inicial" e vira um ícone como qualquer app.' },
         { q: 'Meus favoritos somem se eu limpar o navegador?', a: 'Sim, ficam no localStorage. Antes de limpar, clique em "Compartilhar favoritos" para exportar o link.' }
