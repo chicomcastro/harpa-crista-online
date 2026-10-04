@@ -66,6 +66,44 @@
     tocando = true;
     track('partitura_video_played', { number, instrument: atual.instrumento, video_id: atual.video });
   }
+
+  /*
+   * Visor da partitura (#5).
+   *
+   * A promessa do produto é ler a pauta aqui dentro, e até agora a aba entregava um thumbnail do
+   * YouTube e um link para o Drive — os dois tiram a pessoa do app, e três pautas espremidas em
+   * 330px são ilegíveis.
+   *
+   * Renderizar o PDF por conta própria (pdf.js, canvas) não dá: os arquivos moram no Drive, que não
+   * manda Access-Control-Allow-Origin, então fetch é bloqueado. Mudar isso é trabalho do
+   * youtube-manager, não daqui.
+   *
+   * Então o visor usa o /preview do próprio Drive em iframe: ele aceita ser embutido (sem
+   * X-Frame-Options, conferido em 04/10/2026) e já traz zoom e virada de página. Quando os PDFs
+   * saírem do Drive, troca-se só a fonte do iframe por um render nosso.
+   */
+  const idDrive = $derived(atual?.pdf_url?.match(/\/file\/d\/([^/]+)/)?.[1] || null);
+  const urlVisor = $derived(idDrive ? `https://drive.google.com/file/d/${idDrive}/preview` : null);
+
+  let telaCheia = $state(false);
+
+  function abrirTelaCheia() {
+    telaCheia = true;
+    track('partitura_fullscreen_opened', { number, instrument: atual.instrumento });
+  }
+
+  // Esc fecha, e o fundo não rola enquanto o visor está aberto.
+  $effect(() => {
+    if (!telaCheia || !browser) return;
+    const onKey = (e) => { if (e.key === 'Escape') telaCheia = false; };
+    const antes = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = antes;
+      window.removeEventListener('keydown', onKey);
+    };
+  });
 </script>
 
 {#if versoes.length}
@@ -105,6 +143,24 @@
       </div>
     </div>
 
+    {#if urlVisor}
+      <!-- A pauta é o conteúdo principal da aba; o vídeo fica no dock, atrás de um toque. -->
+      <div class="relative w-full rounded-lg overflow-hidden bg-[#f7f5ef] mb-3" style="aspect-ratio: 1 / 1.1;">
+        <iframe
+          src={urlVisor}
+          title="Partitura de {partituras.hinos[String(number)]?.nome || `hino ${number}`} para {atual.rotulo}"
+          loading="lazy"
+          class="absolute inset-0 w-full h-full"
+        ></iframe>
+      </div>
+      <button
+        onclick={abrirTelaCheia}
+        class="w-full mb-3 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white"
+      >
+        <span class="mi mi-sm">fullscreen</span> Abrir na tela
+      </button>
+    {/if}
+
     {#if atual.video}
       <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black mb-3">
         {#if tocando}
@@ -117,7 +173,7 @@
           ></iframe>
         {:else}
           <!-- Capa no lugar do player: o iframe do YouTube pesa ~1 MB e só carrega se a pessoa quiser ver. -->
-          <button onclick={tocar} class="absolute inset-0 w-full h-full group" aria-label="Tocar vídeo da partitura para {atual.rotulo}">
+          <button onclick={tocar} class="absolute inset-0 w-full h-full group" aria-label="Ouvir com o vídeo da partitura para {atual.rotulo}">
             <img
               src="https://i.ytimg.com/vi/{atual.video}/hqdefault.jpg"
               alt=""
@@ -143,7 +199,7 @@
           onclick={() => track('partitura_pdf_opened', { number, instrument: atual.instrumento })}
           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-gray-900 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-gray-800"
         >
-          <span class="mi mi-sm">download</span> Partitura em PDF
+          <span class="mi mi-sm">download</span> Baixar PDF
         </a>
       {/if}
       {#if atual.video}
@@ -154,9 +210,56 @@
           onclick={() => track('partitura_youtube_opened', { number, instrument: atual.instrumento, video_id: atual.video })}
           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
-          Abrir no YouTube ↗
+          Ver no canal ↗
         </a>
       {/if}
     </div>
   </section>
+
+  {#if telaCheia && urlVisor}
+    <!-- Fechar fica no canto esquerdo: no painel antigo ele caía em cima do link do canal. -->
+    <div class="fixed inset-0 z-[70] bg-gray-950 flex flex-col" role="dialog" aria-modal="true" aria-label="Partitura em tela cheia">
+      <div class="flex items-center gap-3 px-3 py-2 shrink-0 text-white">
+        <button onclick={() => telaCheia = false} class="w-11 h-11 -ml-1 flex items-center justify-center rounded-lg hover:bg-white/10" aria-label="Fechar partitura">
+          <span class="mi">arrow_back</span>
+        </button>
+        <div class="min-w-0 flex-1">
+          <div class="text-sm font-semibold truncate">{partituras.hinos[String(number)]?.nome || `Hino ${number}`}</div>
+          <div class="text-xs text-white/60 truncate">{atual.rotulo} · {atual.tipo === 'arranjo' ? 'arranjo' : 'melodia'}</div>
+        </div>
+      </div>
+
+      <iframe src={urlVisor} title="Partitura para {atual.rotulo}" class="flex-1 w-full bg-[#f7f5ef]"></iframe>
+
+      {#if tocando && atual.video}
+        <iframe
+          src="https://www.youtube-nocookie.com/embed/{atual.video}?autoplay=1&rel=0"
+          title="{atual.rotulo} — partitura em vídeo"
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowfullscreen
+          class="w-full aspect-video shrink-0"
+        ></iframe>
+      {/if}
+
+      <div class="flex items-stretch gap-2 px-3 py-2 shrink-0 safe-bottom bg-gray-900 text-white overflow-x-auto">
+        {#if atual.video}
+          <button onclick={() => tocando ? tocando = false : tocar()} class="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-white/10 hover:bg-white/20 text-sm whitespace-nowrap">
+            <span class="mi mi-sm">{tocando ? 'close' : 'play_arrow'}</span>{tocando ? 'Fechar vídeo' : 'Ouvir com o vídeo'}
+          </button>
+        {/if}
+        <a href={atual.pdf_url} target="_blank" rel="noreferrer"
+          onclick={() => track('partitura_pdf_opened', { number, instrument: atual.instrumento, from: 'fullscreen' })}
+          class="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-white/10 hover:bg-white/20 text-sm whitespace-nowrap">
+          <span class="mi mi-sm">download</span> Baixar PDF
+        </a>
+        {#if atual.video}
+          <a href="https://www.youtube.com/watch?v={atual.video}" target="_blank" rel="noreferrer"
+            onclick={() => track('partitura_youtube_opened', { number, instrument: atual.instrumento, from: 'fullscreen' })}
+            class="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-white/10 hover:bg-white/20 text-sm whitespace-nowrap">
+            Ver no canal ↗
+          </a>
+        {/if}
+      </div>
+    </div>
+  {/if}
 {/if}
