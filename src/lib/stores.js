@@ -231,3 +231,21 @@ function createNotes() {
 }
 export const notes = createNotes();
 
+
+/**
+ * Colunas da letra no desktop. Só vale a partir de lg — abaixo disso a coluna fica estreita
+ * demais e o verso quebra no meio.
+ */
+function createColunas() {
+  const initial = browser ? parseInt(localStorage.getItem('colunasLetra') || '1') : 1;
+  const { subscribe, set } = writable(initial === 2 ? 2 : 1);
+  return {
+    subscribe,
+    set(n) {
+      const v = n === 2 ? 2 : 1;
+      set(v);
+      if (browser) localStorage.setItem('colunasLetra', String(v));
+    }
+  };
+}
+export const colunasLetra = createColunas();
