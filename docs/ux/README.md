@@ -157,17 +157,26 @@ flowchart LR
 - Alvos de toque ≥ 44px; botões só com ícone sempre com `aria-label`.
 - Mantém a identidade atual (azul-escuro + índigo), com mais contraste.
 
-## 8. Backlog sugerido (Fase 1)
+## 8. Backlog
 
-- [ ] Esconder player quando não houver áudio
-- [ ] Refrão: caixa normal + rótulo "Refrão"
-- [ ] Página do hino em abas (só as que existem) + chip "Cifra ↗"
-- [ ] Mover tamanho de fonte para "Aa"; topo com modo/ações do músico
-- [ ] Partitura em tela cheia com zoom (PDF renderizado) + dock de vídeo
-- [ ] Seletor de versão agrupado (melodia / arranjo)
-- [ ] "Pedir este hino" nos hinos sem partitura (link para post do canal)
-- [ ] Home: Próximo culto, Novo no canal, filtro "com partitura", lista em 1 coluna
-- [ ] Página `/h/[n]/[instrumento]`: PDF primário + inscrição no canal
-- [ ] Rolagem automática e tela sempre acesa (Wake Lock)
-- [ ] Unificar "Ir para nº" na busca
-- [x] Corrigir "Siâo" → "Sião" em `data/2. SAUDOSA LEMBRANÇA.txt` e `data/149. CANTO DO PESCADOR.txt`
+O backlog virou **issues** no repo — é lá que o estado vive (aberta, em andamento, fechada por PR).
+Este documento continua sendo o *porquê*: diagnóstico, princípios e as duas fases.
+
+→ [issues com a label `ux`](https://github.com/chicomcastro/harpa-crista-online/issues?q=is%3Aissue+label%3Aux)
+
+| # | Item | Severidade |
+|---|---|---|
+| [#3](https://github.com/chicomcastro/harpa-crista-online/issues/3) | Player de áudio aparece vazio nos hinos sem MP3 | 🔴 |
+| [#4](https://github.com/chicomcastro/harpa-crista-online/issues/4) | Página do hino em abas + chip Cifra ↗ | 🔴 |
+| [#5](https://github.com/chicomcastro/harpa-crista-online/issues/5) | Partitura legível na tela: visor com zoom e dock do vídeo | 🔴 |
+| [#6](https://github.com/chicomcastro/harpa-crista-online/issues/6) | Barra do músico: Rolar · Aa · Palco | 🔴 |
+| [#7](https://github.com/chicomcastro/harpa-crista-online/issues/7) | Home: lista em uma coluna, selo de partitura e filtros | 🔴 |
+| [#8](https://github.com/chicomcastro/harpa-crista-online/issues/8) | Refrão legível: caixa normal, rótulo e contraste | 🟠 |
+| [#9](https://github.com/chicomcastro/harpa-crista-online/issues/9) | Seletor de versão agrupado por melodia e arranjo | 🟠 |
+| [#10](https://github.com/chicomcastro/harpa-crista-online/issues/10) | "Pedir este hino" nos 612 hinos sem partitura | 🟠 |
+| [#11](https://github.com/chicomcastro/harpa-crista-online/issues/11) | `/h/[nº]/[instrumento]`: PDF primário e inscrição no canal | 🟠 |
+| [#12](https://github.com/chicomcastro/harpa-crista-online/issues/12) | Rolagem automática e tela acesa (Wake Lock) | 🟠 |
+| [#13](https://github.com/chicomcastro/harpa-crista-online/issues/13) | Unificar "Ir para nº" na busca | 🔵 |
+| [#14](https://github.com/chicomcastro/harpa-crista-online/issues/14) | Culto com tom por hino e card "Próximo culto" | 🟠 |
+
+Já feito: `"Siâo"` → `"Sião"` nos hinos 2 e 149 (37af215).
