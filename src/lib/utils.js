@@ -528,3 +528,44 @@ export async function shareSong(number, title, baseUrl) {
     return false;
   }
 }
+
+/*
+ * Caixa normal no refrão.
+ *
+ * 445 dos 548 refrões do acervo estão em CAIXA ALTA no `data/*.txt` — herança da digitação do
+ * hinário. Maiúscula contínua é mais lenta de ler (some o contorno da palavra), e no refrão ela
+ * ainda se somava a itálico e cinza, três ênfases em cima do mesmo bloco.
+ *
+ * O `.txt` fica como está: o modo apresentação projeta em tela grande, onde a caixa alta ajuda, e
+ * a imagem compartilhável reproduz o hinário. A normalização é só de exibição.
+ *
+ * `nomes-proprios.json` saiu do próprio acervo: palavras que as estrofes (que não estão em caixa
+ * alta) capitalizam no meio da linha em ≥80% das ocorrências, com ao menos 5 aparições. Daí vem
+ * "Senhor", "Consolador", "Sião". Regenerar com `node scripts/gerar-nomes-proprios.js` quando o acervo mudar.
+ */
+import nomesProprios from './nomes-proprios.json';
+
+const PALAVRA = /[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]*/g;
+
+/** A linha é caixa alta de verdade? (ignora linha já normal e linha sem letra) */
+function ehCaixaAlta(linha) {
+  const letras = linha.match(/[A-Za-zÀ-ÿ]/g);
+  if (!letras || letras.length < 2) return false;
+  return letras.filter(c => c === c.toUpperCase()).length / letras.length > 0.9;
+}
+
+/**
+ * "CHUVAS PEDIMOS SENHOR" → "Chuvas pedimos Senhor".
+ * Linha que já está em caixa normal volta intacta.
+ */
+export function caixaNormal(linha) {
+  if (!ehCaixaAlta(linha)) return linha;
+  let primeira = true;
+  return linha.replace(PALAVRA, (p) => {
+    const baixa = p.toLowerCase();
+    const proprio = nomesProprios[baixa];
+    if (proprio) { primeira = false; return proprio; }
+    if (primeira) { primeira = false; return baixa.charAt(0).toUpperCase() + baixa.slice(1); }
+    return baixa;
+  });
+}
