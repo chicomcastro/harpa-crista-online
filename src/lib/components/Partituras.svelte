@@ -270,7 +270,7 @@
       <div class="flex items-stretch justify-center gap-2 px-3 py-2 shrink-0 safe-bottom bg-gray-900 text-white">
         {#if atual.video}
           <button onclick={() => tocando ? tocando = false : tocar()} class="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-white/10 hover:bg-white/20 text-sm whitespace-nowrap">
-            <span class="mi mi-sm">{tocando ? 'close' : 'play_arrow'}</span>{tocando ? 'Fechar' : 'Vídeo'}<span class="hidden sm:inline">{tocando ? ' vídeo' : ' com o vídeo'}</span>
+            <span class="mi mi-sm">{tocando ? 'close' : 'play_arrow'}</span><span class="hidden sm:inline">{tocando ? 'Fechar vídeo' : 'Ver com o vídeo'}</span><span class="sm:hidden">{tocando ? 'Fechar' : 'Vídeo'}</span>
           </button>
         {/if}
         <a href={atual.pdf_url} target="_blank" rel="noreferrer"
