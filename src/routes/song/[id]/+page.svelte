@@ -59,7 +59,9 @@
       scrollLetra = 0;
       pararRolagem();
       mostrarRolagem = false;
-      showSheet = false;
+      showSheet = false;   // troca de hino fecha na hora, sem animar
+      folhaAberta = false;
+      arrasto = 0;
       tocandoAudio = false;
       progresso = 0;
       noteDraft = $notes[song.number] || '';
@@ -144,6 +146,68 @@
     .filter(v => v.youtube_id && (!v.publicado_em || v.publicado_em <= hoje)) : []);
   const temExternos = $derived(!!externalLinks.chord || (!!externalLinks.sheet && !temPartituraPropria));
   let showSheet = $state(false);
+
+  /*
+   * Folha de opções: sobe de baixo e fecha arrastando o agarrador.
+   *
+   * A animação é feita na mão, não com transition: do Svelte, porque as duas coisas disputam o
+   * mesmo `transform`: o outro do fly começaria de translateY(0) e daria um salto quando a folha
+   * já estivesse arrastada para baixo.
+   *
+   * Enquanto o dedo está na tela a transição é desligada (senão cada frame do arrasto seria
+   * animado e a folha ficaria "molenga"); ao soltar, ela volta e leva a folha até o destino.
+   *
+   * Fecha por distância OU por velocidade: um puxão curto e rápido também deve fechar, que é o
+   * gesto que a pessoa faz sem pensar.
+   */
+  const DURACAO_FOLHA = 260;
+  const FECHA_DISTANCIA = 90;   // px
+  const FECHA_VELOCIDADE = 0.5; // px/ms
+
+  let folhaAberta = $state(false);
+  let arrasto = $state(0);
+  let arrastando = $state(false);
+  let arrastoY0 = 0;
+  let arrastoT0 = 0;
+
+  $effect(() => {
+    if (!showSheet) return;
+    arrasto = 0;
+    const id = requestAnimationFrame(() => folhaAberta = true);
+    return () => cancelAnimationFrame(id);
+  });
+
+  function fecharFolha() {
+    arrastando = false;
+    arrasto = 0;
+    folhaAberta = false;
+    setTimeout(() => { if (!folhaAberta) showSheet = false; }, DURACAO_FOLHA);
+  }
+
+  function arrastoInicio(e) {
+    arrastando = true;
+    arrastoY0 = e.clientY;
+    arrastoT0 = performance.now();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function arrastoMove(e) {
+    if (!arrastando) return;
+    arrasto = Math.max(0, e.clientY - arrastoY0); // só para baixo
+  }
+
+  function arrastoFim(e) {
+    if (!arrastando) return;
+    arrastando = false;
+    const velocidade = arrasto / Math.max(performance.now() - arrastoT0, 1);
+    if (arrasto > FECHA_DISTANCIA || velocidade > FECHA_VELOCIDADE) {
+      track('sheet_dismissed', { number: song.number, gesture: 'drag' });
+      fecharFolha();
+    } else {
+      arrasto = 0; // volta para o lugar
+    }
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  }
 
   /*
    * Abas Letra | Partitura (#4). 96% dos hinos são só letra, então a aba de partitura só existe
@@ -280,7 +344,7 @@
   }
 
   function abrirPartituraBarra() {
-    showSheet = false;
+    fecharFolha();
     trocarAba('partitura');
   }
 
@@ -308,6 +372,7 @@
   }
 
   function handleKeydown(e) {
+    if (e.key === 'Escape' && showSheet) { fecharFolha(); return; }
     if (e.key === 'ArrowLeft' && prevSong) {
       track('hymn_navigated', { direction: 'prev', from: song.number, to: prevSong.number, method: 'keyboard' });
       window.location.href = `${base}/song/${prevSong.id}`;
@@ -751,23 +816,48 @@
 
   {#if showSheet}
     <div class="sm:hidden fixed inset-0 z-[60]" role="presentation">
-      <button class="absolute inset-0 bg-black/50" onclick={() => showSheet = false} aria-label="Fechar opções"></button>
-      <div class="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white dark:bg-gray-900 pt-2 pb-6 safe-bottom shadow-2xl max-h-[80vh] overflow-y-auto">
-        <div class="mx-auto mb-2 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+      <button
+        class="absolute inset-0 bg-black/50 transition-opacity duration-[260ms] motion-reduce:transition-none {folhaAberta && !arrasto ? 'opacity-100' : folhaAberta ? 'opacity-70' : 'opacity-0'}"
+        onclick={fecharFolha}
+        aria-label="Fechar opções"
+      ></button>
+      <div
+        class="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white dark:bg-gray-900 pb-6 safe-bottom shadow-2xl max-h-[80vh] overflow-y-auto will-change-transform
+          {arrastando ? '' : 'transition-transform duration-[260ms] ease-[cubic-bezier(.32,.72,0,1)] motion-reduce:transition-none'}
+          {folhaAberta ? '' : 'translate-y-full'}"
+        style={arrasto ? `transform: translateY(${arrasto}px)` : ''}
+      >
+        <!--
+          Agarrador: a área de toque tem 32px de altura, não a espessura da linha. touch-none impede
+          o navegador de interpretar o gesto como rolagem da folha antes do pointermove chegar.
+        -->
+        <div
+          class="sticky top-0 z-10 flex items-center justify-center h-8 cursor-grab active:cursor-grabbing touch-none bg-white dark:bg-gray-900 rounded-t-2xl"
+          onpointerdown={arrastoInicio}
+          onpointermove={arrastoMove}
+          onpointerup={arrastoFim}
+          onpointercancel={arrastoFim}
+          role="button"
+          tabindex="0"
+          aria-label="Arraste para baixo para fechar"
+          onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fecharFolha(); } }}
+        >
+          <span class="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700"></span>
+        </div>
         <div class="px-4 pb-2 text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">#{song.number} {song.title}</div>
         <button onclick={() => { favorites.toggle(song.number); haptic(15); track('favorite_toggled', { number: song.number, favorited: !isFavorite, from: 'sheet' }); }} class="sheet-item">
           <span class="mi {isFavorite ? 'mi-filled text-red-500' : ''}">favorite</span>{isFavorite ? 'Remover dos favoritos' : 'Favoritar'}
         </button>
-        <button onclick={() => { showSheet = false; handleShare(); }} class="sheet-item"><span class="mi">share</span>Compartilhar</button>
-        <button onclick={() => { showSheet = false; handleCopy(); }} class="sheet-item"><span class="mi">content_copy</span>Copiar letra</button>
+        <button onclick={() => { fecharFolha(); handleShare(); }} class="sheet-item"><span class="mi">share</span>Compartilhar</button>
+        <button onclick={() => { fecharFolha(); handleCopy(); }} class="sheet-item"><span class="mi">content_copy</span>Copiar letra</button>
         <a href="{base}/song/{song.id}/present" onclick={() => track('presentation_opened_nav', { number: song.number, from: 'sheet' })} class="sheet-item"><span class="mi">present_to_all</span>Modo apresentação</a>
         <div class="px-4 pt-3 pb-1 text-xs text-gray-400 uppercase tracking-wider">Adicionar à lista</div>
         {#each $playlists as pl (pl.id)}
-          <button onclick={() => { addToPlaylist(pl.id); showSheet = false; }} disabled={pl.numbers.includes(song.number)} class="sheet-item disabled:opacity-40">
+          <button onclick={() => { addToPlaylist(pl.id); fecharFolha(); }} disabled={pl.numbers.includes(song.number)} class="sheet-item disabled:opacity-40">
             <span class="mi">queue_music</span><span class="flex-1 truncate text-left">{pl.name}</span>{#if pl.numbers.includes(song.number)}<span class="text-xs text-gray-400">✓</span>{/if}
           </button>
         {/each}
-        <button onclick={() => { showSheet = false; createAndAdd(); }} class="sheet-item text-brand-600 dark:text-brand-400"><span class="mi">playlist_add</span>Nova lista</button>
+        <button onclick={() => { fecharFolha(); createAndAdd(); }} class="sheet-item text-brand-600 dark:text-brand-400"><span class="mi">playlist_add</span>Nova lista</button>
         {#if temExternos}
           <div class="px-4 pt-3 pb-1 text-xs text-gray-400 uppercase tracking-wider">Em outros sites</div>
           {#if externalLinks.chord}
