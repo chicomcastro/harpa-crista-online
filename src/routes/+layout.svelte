@@ -4,7 +4,7 @@
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
   import { darkMode } from '$lib/stores.js';
-  import { initAnalytics, track } from '$lib/analytics.js';
+  import { initAnalytics, track, trackExternalEntry } from '$lib/analytics.js';
   import { onMount } from 'svelte';
 
   let { children } = $props();
@@ -40,6 +40,7 @@
 
   onMount(async () => {
     initAnalytics();
+    trackExternalEntry();
     if (import.meta.env.DEV) {
       if ('serviceWorker' in navigator) {
         const regs = await navigator.serviceWorker.getRegistrations();

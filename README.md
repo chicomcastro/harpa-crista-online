@@ -14,6 +14,7 @@ Todos os 640 hinos da Harpa Cristã em uma aplicação web leve, rápida e offli
 - **Ajuste de fonte** — controle o tamanho do texto na leitura
 - **Compartilhamento** — via Web Share API ou cópia para área de transferência
 - **Copiar letra** — copia o texto formatado do hino para a área de transferência
+- **Partitura por instrumento** — vídeo e PDF do canal [Harpa Cristã Partituras](https://www.youtube.com/@harpacristapartituras) na página do hino (`data/partituras.json`, gerado pelo youtube-manager)
 - **Player de áudio** — reprodução do hino com áudio externo (quando disponível)
 - **Responsivo** — funciona em celular, tablet e desktop
 

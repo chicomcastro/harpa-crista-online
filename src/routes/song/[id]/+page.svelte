@@ -5,6 +5,8 @@
   import { parseVerses, shareSong, haptic } from '$lib/utils.js';
   import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import curatedLinks from '../../../../data/links.json';
+  import partituras from '../../../../data/partituras.json';
+  import Partituras from '$lib/components/Partituras.svelte';
   import { track } from '$lib/analytics.js';
 
   let shareTooltip = $state('');
@@ -121,6 +123,8 @@
   const verses = $derived(song ? parseVerses(song.content) : []);
   const isFavorite = $derived(song ? $favorites.includes(song.number) : false);
   const externalLinks = $derived(song ? (curatedLinks[song.number] || {}) : {});
+  // Com partitura própria (canal Harpa Cristã Partituras), o botão leva ao bloco da página em vez do site externo.
+  const temPartituraPropria = $derived(song ? !!partituras.hinos[String(song.number)]?.length : false);
 
   async function handleShare() {
     if (!song) return;
@@ -367,7 +371,7 @@
     </div>
 
     <!-- External curated links -->
-    {#if externalLinks.chord || externalLinks.sheet}
+    {#if externalLinks.chord || externalLinks.sheet || temPartituraPropria}
       <div class="flex flex-wrap gap-2 mb-4">
         {#if externalLinks.chord}
           <a
@@ -380,7 +384,15 @@
             <span class="mi mi-sm">music_note</span> Ver cifra ↗
           </a>
         {/if}
-        {#if externalLinks.sheet}
+        {#if temPartituraPropria}
+          <a
+            href="#partituras"
+            onclick={() => track('partituras_anchor_clicked', { number: song.number })}
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-gray-900 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-gray-800"
+          >
+            <span class="mi mi-sm">library_music</span> Partitura e vídeo ↓
+          </a>
+        {:else if externalLinks.sheet}
           <a
             href={externalLinks.sheet}
             target="_blank"
@@ -436,6 +448,8 @@
         </div>
       {/each}
     </div>
+
+    <Partituras number={song.number} />
 
     <!-- Notes -->
     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">

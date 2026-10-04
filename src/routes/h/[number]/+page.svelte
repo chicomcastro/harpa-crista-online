@@ -7,7 +7,7 @@
   const target = data.song ? `${base}/song/${data.song.id}` : `${base}/`;
 
   onMount(() => {
-    goto(target, { replaceState: true });
+    goto(target + location.search, { replaceState: true });
   });
 </script>
 
@@ -18,6 +18,9 @@
     <meta name="description" content="Letra do hino {data.song.number} da Harpa Cristã: {data.song.title}." />
     <link rel="canonical" href="https://chicomcastro.github.io/harpa-crista-online/song/{data.song.id}" />
   {/if}
+  <!-- Script antes do meta refresh: o refresh descarta a query (?yt=<nº>-<instrumento>) que marca a origem no Amplitude.
+       O meta continua para quem não roda JS (preview de link). -->
+  {@html `<script>location.replace(${JSON.stringify(target)} + location.search)</script>`}
   <meta http-equiv="refresh" content="0; url={target}" />
 </svelte:head>
 
