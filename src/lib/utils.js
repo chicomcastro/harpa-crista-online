@@ -569,3 +569,20 @@ export function caixaNormal(linha) {
     return baixa;
   });
 }
+
+/*
+ * Um passo da rolagem automática (#12).
+ *
+ * Separado do componente para poder ser testado: a velocidade é px por SEGUNDO, não por frame,
+ * senão o mesmo nível rola o dobro num celular de 120Hz. `sobra` carrega a fração entre frames,
+ * porque scrollBy(0, 0.53) não anda. `dt` é limitado para a página não dar um salto quando a aba
+ * volta do segundo plano, onde o navegador derruba o rAF.
+ */
+export const PX_POR_SEGUNDO = { 1: 18, 2: 32, 3: 50, 4: 75, 5: 110 };
+export const DT_MAXIMO = 0.25;
+
+export function passoRolagem(velocidade, dt, sobra) {
+  const acumulado = sobra + (PX_POR_SEGUNDO[velocidade] ?? PX_POR_SEGUNDO[2]) * Math.min(Math.max(dt, 0), DT_MAXIMO);
+  const px = Math.floor(acumulado);
+  return { px, sobra: acumulado - px };
+}
