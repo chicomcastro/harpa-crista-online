@@ -25,7 +25,7 @@
     imageStatus = method === 'clipboard' ? 'Imagem copiada!' : method === 'download' ? 'Imagem baixada' : 'Compartilhado!';
     setTimeout(() => imageStatus = '', 2000);
   }
-  let titleEl;
+  let titleEl = $state();
   let titleVisible = $state(true);
 
   $effect(() => {
@@ -640,10 +640,11 @@
           + Adicionar nota pessoal
         </button>
       {:else}
-        <label class="block text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-2">
+        <label for="nota-pessoal" class="block text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-2">
           Nota pessoal
         </label>
         <textarea
+          id="nota-pessoal"
           bind:value={noteDraft}
           onblur={saveNote}
           placeholder="Reflexões, referências bíblicas, lembranças…"

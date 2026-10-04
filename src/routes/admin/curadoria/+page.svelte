@@ -28,9 +28,9 @@
   let filter = $state('all'); // 'all' | 'pending' | 'missing_chord' | 'missing_sheet' | 'missing_both' | 'complete'
   let focusedField = $state('chord'); // 'chord' | 'sheet'
   let saveStatus = $state('');
-  let listEl;
-  let chordInput;
-  let sheetInput;
+  let listEl = $state();
+  let chordInput = $state();
+  let sheetInput = $state();
 
   const filteredSongs = $derived.by(() => {
     const q = search.trim().toLowerCase();

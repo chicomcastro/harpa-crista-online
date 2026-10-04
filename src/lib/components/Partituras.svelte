@@ -35,7 +35,7 @@
   ].filter(g => g.itens.length));
 
   let escolhido = $state(instrumento);
-  let secao;
+  let secao = $state();
   let tocando = $state(false);
 
   function preferido() {
