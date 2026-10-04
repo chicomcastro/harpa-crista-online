@@ -169,7 +169,14 @@
 <div class="min-h-screen flex flex-col">
   {#if !hideChrome}
   <header class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 safe-top">
-    <div class="relative container mx-auto px-4 h-14 flex items-center justify-between">
+    <!--
+      overflow-hidden é obrigatório: a caixa de busca fica em translate-x-full quando fechada, ou
+      seja, uma largura inteira à direita. Sem recorte ela entra no scroll do documento, a página
+      ganha rolagem horizontal e dá para ver a busca "escondida" arrastando para o lado.
+    -->
+    <!-- max-w-5xl é a mesma largura da home e da página do hino no desktop: sem isso o logo encosta
+         na borda da janela enquanto o conteúdo fica centralizado, e as duas réguas não batem. -->
+    <div class="relative overflow-hidden container mx-auto px-4 max-w-5xl h-14 flex items-center justify-between">
       <!-- Conteúdo normal: some quando a busca entra, para não aparecer por baixo dela. -->
       <div class="contents {buscaAberta ? 'invisible' : ''}" aria-hidden={buscaAberta}>
         <a href="{base}/" class="flex items-center gap-2 font-bold text-lg text-brand-700 dark:text-brand-400">
@@ -223,7 +230,7 @@
 
     {#if buscaAberta}
       <!-- Dropdown: resultado enquanto digita, últimas buscas quando vazio. -->
-      <div class="fixed inset-x-0 top-14 z-[55] max-h-[70vh] overflow-y-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-xl">
+      <div class="fixed inset-x-0 top-14 z-[55] max-h-[70vh] overflow-y-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-xl sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-5xl sm:rounded-b-2xl sm:border-x">
         {#if busca.trim()}
           {#if secoesFiltradas.length}
             <div class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-widest text-gray-400">Ir para</div>
