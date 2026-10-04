@@ -8,6 +8,7 @@
   import partituras from '../../../../data/partituras.json';
   import Partituras from '$lib/components/Partituras.svelte';
   import { track } from '$lib/analytics.js';
+  import { tick } from 'svelte';
 
   let shareTooltip = $state('');
   let copyTooltip = $state('');
@@ -51,6 +52,9 @@
       track('song_viewed', { song_id: song.id, number: song.number, title: song.title });
       recentlyViewed.add(song.number);
       painelAberto = false;
+      showSheet = false;
+      tocandoAudio = false;
+      progresso = 0;
       noteDraft = $notes[song.number] || '';
       showNotes = !!$notes[song.number];
       activeVerse = -1;
@@ -60,6 +64,7 @@
   function onAudioTimeUpdate() {
     if (!audioEl || !audioEl.duration || verses.length === 0) return;
     const ratio = audioEl.currentTime / audioEl.duration;
+    progresso = ratio;
     const idx = Math.min(verses.length - 1, Math.floor(ratio * verses.length));
     if (idx !== activeVerse) {
       activeVerse = idx;
@@ -132,6 +137,22 @@
     .filter(v => v.youtube_id && (!v.publicado_em || v.publicado_em <= hoje)) : []);
   const temExternos = $derived(!!externalLinks.chord || (!!externalLinks.sheet && !temPartituraPropria));
   let painelAberto = $state(false);
+  let showSheet = $state(false);
+  let showFonte = $state(false);
+  let tocandoAudio = $state(false);
+  let progresso = $state(0);
+
+  function alternarAudio() {
+    if (!audioEl) return;
+    if (audioEl.paused) audioEl.play().catch(() => {}); else audioEl.pause();
+    track('audio_toggled_bar', { number: song.number, playing: audioEl.paused });
+  }
+
+  function abrirPartituraBarra() {
+    abrirPainel(null);
+    showSheet = false;
+    tick().then(() => document.getElementById('painel-partituras')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
   let painelInstrumento = $state(null);
 
   function abrirPainel(instrumento) {
@@ -239,7 +260,7 @@
     </div>
   </div>
 
-  <div class="container mx-auto px-4 py-3 {temPartituraPropria ? 'max-w-2xl lg:max-w-6xl' : 'max-w-2xl'}">
+  <div class="container mx-auto px-4 pt-3 pb-24 sm:pb-3 {temPartituraPropria ? 'max-w-2xl lg:max-w-6xl' : 'max-w-2xl'}">
     <!-- Top bar -->
     <div class="flex items-center justify-between mb-3">
       <button
@@ -253,7 +274,8 @@
         <span class="mi">arrow_back</span>
       </button>
       <div class="flex items-center gap-1">
-        <!-- Font size controls -->
+        <!-- Font size controls (no celular ficam na barra de baixo) -->
+        <div class="hidden sm:flex items-center gap-1">
         <button onclick={() => { fontSize.decrease(); track('font_size_changed', { action: 'decrease', size: $fontSize }); }} class="btn-icon" aria-label="Diminuir fonte">
           <span class="mi mi-sm">remove</span>
         </button>
@@ -265,6 +287,7 @@
         </button>
 
         <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+        </div>
 
         <!-- Favorite -->
         <button
@@ -324,7 +347,7 @@
         </a>
 
         <!-- Share -->
-        <div class="relative">
+        <div class="relative hidden sm:block">
           <button onclick={handleShare} class="btn-icon" aria-label="Compartilhar hino">
             <span class="mi mi-sm">share</span>
           </button>
@@ -336,7 +359,7 @@
         </div>
 
         <!-- More menu: no celular tem tudo; no desktop, só o que não tem ícone na barra (links externos) -->
-        <div class="relative {temExternos ? '' : 'sm:hidden'}">
+        <div class="relative hidden {temExternos ? 'sm:block' : ''}">
           <button onclick={() => showMoreMenu = !showMoreMenu} class="btn-icon" aria-label="Mais opções">
             <span class="mi mi-sm">more_vert</span>
           </button>
@@ -354,36 +377,7 @@
                     onclick={() => { showMoreMenu = false; track('external_sheet_opened', { number: song.number }); }}
                     class="block px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Partitura ↗</a>
                 {/if}
-                <div class="border-t border-gray-100 dark:border-gray-800 my-1 sm:hidden"></div>
               {/if}
-              <div class="sm:hidden">
-              <button onclick={() => { showMoreMenu = false; handleCopy(); }} class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
-                Copiar letra
-              </button>
-              <a
-                href="{base}/song/{song.id}/present"
-                onclick={() => track('presentation_opened_nav', { number: song.number })}
-                class="block px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                Modo apresentação
-              </a>
-              <div class="border-t border-gray-100 dark:border-gray-800 my-1"></div>
-              <div class="px-3 py-1 text-xs text-gray-400 uppercase tracking-wider">Adicionar à lista</div>
-              {#each $playlists as pl (pl.id)}
-                <button
-                  onclick={() => { addToPlaylist(pl.id); showMoreMenu = false; }}
-                  disabled={pl.numbers.includes(song.number)}
-                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 flex items-center justify-between"
-                >
-                  <span class="truncate">{pl.name}</span>
-                  {#if pl.numbers.includes(song.number)}<span class="text-xs text-gray-400">✓</span>{/if}
-                </button>
-              {/each}
-              <button
-                onclick={() => { createAndAdd(); showMoreMenu = false; }}
-                class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-brand-600 dark:text-brand-400"
-              >+ Nova lista</button>
-              </div>
             </div>
           {/if}
         </div>
@@ -430,7 +424,7 @@
     </div>
 
     {#if painelAberto}
-      <div class="lg:hidden relative mb-4">
+      <div id="painel-partituras" class="lg:hidden relative mb-4 scroll-mt-28">
         <button
           onclick={() => painelAberto = false}
           class="absolute right-2 top-2 z-10 btn-icon text-gray-500 dark:text-gray-400"
@@ -442,13 +436,15 @@
 
     <!-- Audio player -->
     {#if !audioError}
-      <div class="mb-4">
+      <div class="mb-4 hidden sm:block">
         <audio
           bind:this={audioEl}
           src={audioUrl}
           controls
           preload="none"
-          onplay={() => track('audio_played', { number: song.number, title: song.title })}
+          onplay={() => { tocandoAudio = true; track('audio_played', { number: song.number, title: song.title }); }}
+          onpause={() => tocandoAudio = false}
+          onended={() => { tocandoAudio = false; progresso = 0; }}
           onerror={() => { audioError = true; track('audio_errored', { number: song.number }); }}
           ontimeupdate={onAudioTimeUpdate}
           class="w-full h-10 rounded-lg [&::-webkit-media-controls-panel]:bg-gray-100 dark:[&::-webkit-media-controls-panel]:bg-gray-800"
@@ -553,6 +549,71 @@
     </div>
   </div>
   </div>
+
+
+  <!-- Barra flutuante do celular (como a do Cifra Club): texto, áudio, partitura e opções. -->
+  <div class="sm:hidden fixed inset-x-0 bottom-20 z-40 flex justify-center pointer-events-none">
+    {#if showFonte}
+      <div class="pointer-events-auto absolute bottom-full mb-2 flex items-center gap-1 px-2 py-1.5 rounded-xl bg-gray-900/95 text-white shadow-xl">
+        <button onclick={() => { fontSize.decrease(); track('font_size_changed', { action: 'decrease', size: $fontSize, from: 'bar' }); }} class="w-10 h-10 flex items-center justify-center" aria-label="Diminuir texto"><span class="mi">remove</span></button>
+        <button onclick={() => fontSize.reset()} class="w-10 text-sm font-mono text-gray-300" aria-label="Tamanho padrão">{$fontSize}</button>
+        <button onclick={() => { fontSize.increase(); track('font_size_changed', { action: 'increase', size: $fontSize, from: 'bar' }); }} class="w-10 h-10 flex items-center justify-center" aria-label="Aumentar texto"><span class="mi">add</span></button>
+      </div>
+    {/if}
+    <div class="pointer-events-auto relative flex items-stretch px-1.5 py-1 rounded-2xl bg-gray-900/95 text-white shadow-xl ring-1 ring-white/15 backdrop-blur overflow-hidden">
+      {#if tocandoAudio || progresso > 0}
+        <span class="absolute top-0 left-0 h-0.5 bg-brand-400 transition-[width]" style="width: {progresso * 100}%"></span>
+      {/if}
+      <button onclick={() => showFonte = !showFonte} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {showFonte ? 'text-brand-300' : ''}">
+        <span class="mi">format_size</span>Texto
+      </button>
+      {#if !audioError}
+        <button onclick={alternarAudio} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {tocandoAudio ? 'text-brand-300' : ''}">
+          <span class="mi">{tocandoAudio ? 'pause' : 'headphones'}</span>{tocandoAudio ? 'Pausar' : 'Ouvir'}
+        </button>
+      {/if}
+      {#if temPartituraPropria}
+        <button onclick={abrirPartituraBarra} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5">
+          <span class="mi">library_music</span>Partitura
+        </button>
+      {/if}
+      <button onclick={() => { showSheet = true; showFonte = false; }} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5">
+        <span class="mi">more_horiz</span>Opções
+      </button>
+    </div>
+  </div>
+
+  {#if showSheet}
+    <div class="sm:hidden fixed inset-0 z-[60]" role="presentation">
+      <button class="absolute inset-0 bg-black/50" onclick={() => showSheet = false} aria-label="Fechar opções"></button>
+      <div class="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white dark:bg-gray-900 pt-2 pb-6 safe-bottom shadow-2xl max-h-[80vh] overflow-y-auto">
+        <div class="mx-auto mb-2 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+        <div class="px-4 pb-2 text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">#{song.number} {song.title}</div>
+        <button onclick={() => { favorites.toggle(song.number); haptic(15); track('favorite_toggled', { number: song.number, favorited: !isFavorite, from: 'sheet' }); }} class="sheet-item">
+          <span class="mi {isFavorite ? 'mi-filled text-red-500' : ''}">favorite</span>{isFavorite ? 'Remover dos favoritos' : 'Favoritar'}
+        </button>
+        <button onclick={() => { showSheet = false; handleShare(); }} class="sheet-item"><span class="mi">share</span>Compartilhar</button>
+        <button onclick={() => { showSheet = false; handleCopy(); }} class="sheet-item"><span class="mi">content_copy</span>Copiar letra</button>
+        <a href="{base}/song/{song.id}/present" onclick={() => track('presentation_opened_nav', { number: song.number, from: 'sheet' })} class="sheet-item"><span class="mi">present_to_all</span>Modo apresentação</a>
+        <div class="px-4 pt-3 pb-1 text-xs text-gray-400 uppercase tracking-wider">Adicionar à lista</div>
+        {#each $playlists as pl (pl.id)}
+          <button onclick={() => { addToPlaylist(pl.id); showSheet = false; }} disabled={pl.numbers.includes(song.number)} class="sheet-item disabled:opacity-40">
+            <span class="mi">queue_music</span><span class="flex-1 truncate text-left">{pl.name}</span>{#if pl.numbers.includes(song.number)}<span class="text-xs text-gray-400">✓</span>{/if}
+          </button>
+        {/each}
+        <button onclick={() => { showSheet = false; createAndAdd(); }} class="sheet-item text-brand-600 dark:text-brand-400"><span class="mi">playlist_add</span>Nova lista</button>
+        {#if temExternos}
+          <div class="px-4 pt-3 pb-1 text-xs text-gray-400 uppercase tracking-wider">Em outros sites</div>
+          {#if externalLinks.chord}
+            <a href={externalLinks.chord} target="_blank" rel="noreferrer" onclick={() => track('external_chord_opened', { number: song.number, from: 'sheet' })} class="sheet-item"><span class="mi">music_note</span>Cifra ↗</a>
+          {/if}
+          {#if externalLinks.sheet && !temPartituraPropria}
+            <a href={externalLinks.sheet} target="_blank" rel="noreferrer" onclick={() => track('external_sheet_opened', { number: song.number, from: 'sheet' })} class="sheet-item"><span class="mi">library_music</span>Partitura ↗</a>
+          {/if}
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   {#if imageStatus}
     <div class="fixed left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 z-50 px-4 py-2 rounded-lg bg-gray-900/95 dark:bg-gray-100 text-white dark:text-gray-900 text-sm shadow-lg backdrop-blur">

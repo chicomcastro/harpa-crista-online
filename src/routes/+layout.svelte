@@ -151,7 +151,7 @@
     <button
       onclick={scrollToTop}
       style="bottom: max(5rem, calc(env(safe-area-inset-bottom) + 5rem));"
-      class="fixed right-4 sm:!bottom-6 z-40 w-12 h-12 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg flex items-center justify-center transition-opacity"
+      class="fixed right-4 sm:!bottom-6 z-40 {$page.route.id === '/song/[id]' ? 'max-sm:hidden' : ''} w-12 h-12 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg flex items-center justify-center transition-opacity"
       aria-label="Voltar ao topo"
     >
       <span class="mi">arrow_upward</span>
