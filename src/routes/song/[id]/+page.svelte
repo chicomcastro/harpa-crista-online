@@ -12,7 +12,10 @@
 
   let shareTooltip = $state('');
   let copyTooltip = $state('');
-  let audioError = $state(false);
+  // O player só aparece depois que o navegador confirma que existe áudio (ver #3). O bucket
+  // harpa.nyc3.digitaloceanspaces.com está fora desde ao menos 04/10/2026 (NoSuchBucket), então hoje
+  // isso esconde o player em todos os hinos — e volta a mostrar sozinho se o áudio voltar.
+  let audioPronto = $state(false);
   let audioEl;
   let activeVerse = $state(-1);
   let noteDraft = $state('');
@@ -41,10 +44,10 @@
     return () => obs.disconnect();
   });
 
-  // Reset audio error when song changes
+  // Trocar de hino volta a esconder o player até o novo áudio responder.
   $effect(() => {
     $page.params.id;
-    audioError = false;
+    audioPronto = false;
   });
 
   $effect(() => {
@@ -434,25 +437,24 @@
       </div>
     {/if}
 
-    <!-- Audio player -->
-    {#if !audioError}
-      <div class="mb-4 hidden sm:block">
-        <audio
-          bind:this={audioEl}
-          src={audioUrl}
-          controls
-          preload="none"
-          onplay={() => { tocandoAudio = true; track('audio_played', { number: song.number, title: song.title }); }}
-          onpause={() => tocandoAudio = false}
-          onended={() => { tocandoAudio = false; progresso = 0; }}
-          onerror={() => { audioError = true; track('audio_errored', { number: song.number }); }}
-          ontimeupdate={onAudioTimeUpdate}
-          class="w-full h-10 rounded-lg [&::-webkit-media-controls-panel]:bg-gray-100 dark:[&::-webkit-media-controls-panel]:bg-gray-800"
-        >
-          <track kind="captions" />
-        </audio>
-      </div>
-    {/if}
+    <!-- Audio player: montado sempre, visível só quando o arquivo responde (#3). -->
+    <div class="mb-4 {audioPronto ? 'hidden sm:block' : 'hidden'}">
+      <audio
+        bind:this={audioEl}
+        src={audioUrl}
+        controls
+        preload="metadata"
+        onloadedmetadata={() => audioPronto = true}
+        onplay={() => { tocandoAudio = true; track('audio_played', { number: song.number, title: song.title }); }}
+        onpause={() => tocandoAudio = false}
+        onended={() => { tocandoAudio = false; progresso = 0; }}
+        onerror={() => { audioPronto = false; track('audio_unavailable', { number: song.number }); }}
+        ontimeupdate={onAudioTimeUpdate}
+        class="w-full h-10 rounded-lg [&::-webkit-media-controls-panel]:bg-gray-100 dark:[&::-webkit-media-controls-panel]:bg-gray-800"
+      >
+        <track kind="captions" />
+      </audio>
+    </div>
 
     <!-- Verses -->
     <div class="song-content font-serif" style="font-size: {$fontSize}px; line-height: 1.7;">
@@ -570,7 +572,7 @@
       <button onclick={() => showFonte = !showFonte} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {showFonte ? 'text-brand-300' : ''}">
         <span class="mi">format_size</span>Texto
       </button>
-      {#if !audioError}
+      {#if audioPronto}
         <button onclick={alternarAudio} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {tocandoAudio ? 'text-brand-300' : ''}">
           <span class="mi">{tocandoAudio ? 'pause' : 'headphones'}</span>{tocandoAudio ? 'Pausar' : 'Ouvir'}
         </button>
