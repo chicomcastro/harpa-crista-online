@@ -170,4 +170,4 @@ flowchart LR
 - [ ] Página `/h/[n]/[instrumento]`: PDF primário + inscrição no canal
 - [ ] Rolagem automática e tela sempre acesa (Wake Lock)
 - [ ] Unificar "Ir para nº" na busca
-- [ ] Corrigir "Siâo" → "Sião" em `data/2. SAUDOSA LEMBRANÇA.txt`
+- [x] Corrigir "Siâo" → "Sião" em `data/2. SAUDOSA LEMBRANÇA.txt` e `data/149. CANTO DO PESCADOR.txt`
