@@ -150,6 +150,37 @@
    * As duas abas ficam montadas e alternam com `hidden`, para não refazer a letra inteira a cada
    * troca; o scroll da letra é guardado na mão porque esconder o bloco encolhe a página.
    */
+  /*
+   * "Pedir este hino" (#10). 612 dos 640 hinos não têm partitura, e até agora quem caía num deles
+   * via só a letra: o app não oferecia caminho nem aprendia com a visita.
+   *
+   * O pedido vai por dois canais de propósito. O evento do Amplitude é o que o youtube-manager
+   * consegue ler para priorizar a fila de arranjos (não depende de ninguém catar comentário na
+   * mão). A aba de comunidade do canal é onde o pedido fica público, que é o que faz outra pessoa
+   * pedir o mesmo hino. Ver chicomcastro/youtube-manager#10.
+   *
+   * O "já pedi" fica no localStorage só para a pessoa não ficar sem resposta ao tocar — não é
+   * contagem de verdade, que vive no Amplitude.
+   */
+  const CHAVE_PEDIDOS = 'hc_pedidos';
+  let pedido = $state(false);
+
+  $effect(() => {
+    if (!song) return;
+    try { pedido = JSON.parse(localStorage.getItem(CHAVE_PEDIDOS) || '[]').includes(song.number); }
+    catch { pedido = false; }
+  });
+
+  function pedirHino() {
+    track('hymn_requested', { number: song.number, title: song.title });
+    try {
+      const lista = JSON.parse(localStorage.getItem(CHAVE_PEDIDOS) || '[]');
+      if (!lista.includes(song.number)) localStorage.setItem(CHAVE_PEDIDOS, JSON.stringify([...lista, song.number]));
+    } catch {}
+    pedido = true;
+    window.open(`${partituras.canal}/community`, '_blank', 'noreferrer');
+  }
+
   let aba = $state('letra');
   let scrollLetra = 0;
 
@@ -492,6 +523,27 @@
       {/each}
     </div>
 
+      {#if !temPartituraPropria}
+        <div class="mt-8 p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <h2 class="font-semibold text-gray-800 dark:text-gray-100">Ainda não tem partitura deste hino</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Os mais pedidos entram na fila do canal Harpa Cristã Partituras.
+          </p>
+          <div class="flex flex-wrap items-center gap-2 mt-3">
+            <button
+              onclick={pedirHino}
+              class="inline-flex items-center gap-1.5 min-h-[44px] px-4 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white"
+            >
+              <span class="mi mi-sm">{pedido ? 'check' : 'campaign'}</span>{pedido ? 'Pedido registrado' : 'Pedir este hino'}
+            </button>
+            <a
+              href="{base}/?part=1"
+              onclick={() => track('filter_opened_from_request', { number: song.number })}
+              class="inline-flex items-center min-h-[44px] px-4 text-sm text-brand-600 dark:text-brand-400 hover:underline"
+            >Ver os {Object.keys(partituras.hinos).length} que já têm</a>
+          </div>
+        </div>
+      {/if}
     </div><!-- /aba letra -->
 
     <!-- Notes -->
