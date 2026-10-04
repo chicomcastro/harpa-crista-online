@@ -19,6 +19,19 @@
       .filter(v => v.video || v.pdf_url)
   );
 
+  /*
+   * Agrupamento melodia × arranjo (#9). "Violino" é para uma pessoa; "Quarteto de Cordas" é para
+   * quatro — eram chips idênticos numa faixa rolável, e o último sempre aparecia cortado ("Tror").
+   *
+   * O seletor é um <select> nativo de propósito: no celular ele vira a roda do sistema, nunca corta
+   * rótulo, e já vem com teclado e leitor de tela de graça. Dropdown próprio custaria mais código
+   * para entregar menos.
+   */
+  const grupos = $derived([
+    { rotulo: 'Melodias', itens: versoes.filter(v => v.tipo !== 'arranjo') },
+    { rotulo: 'Arranjos', itens: versoes.filter(v => v.tipo === 'arranjo') }
+  ].filter(g => g.itens.length));
+
   let escolhido = $state(instrumento);
   let secao;
   let tocando = $state(false);
@@ -70,17 +83,26 @@
       >Canal no YouTube ↗</a>
     </div>
 
-    <div class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 mb-3" role="tablist">
-      {#each versoes as v (v.instrumento)}
-        <button
-          role="tab"
-          aria-selected={v.instrumento === atual.instrumento}
-          onclick={() => escolher(v)}
-          class="shrink-0 px-3 py-1.5 text-sm rounded-full border transition-colors {v.instrumento === atual.instrumento
-            ? 'bg-brand-600 border-brand-600 text-white'
-            : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'}"
-        >{v.rotulo}</button>
-      {/each}
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <label class="sr-only" for="versao-{number}">Instrumento</label>
+      <select
+        id="versao-{number}"
+        value={atual.instrumento}
+        onchange={(e) => escolher(versoes.find(v => v.instrumento === e.currentTarget.value))}
+        class="min-w-0 max-w-full px-3 py-2 pr-8 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100"
+      >
+        {#each grupos as g (g.rotulo)}
+          <optgroup label={g.rotulo}>
+            {#each g.itens as v (v.instrumento)}
+              <option value={v.instrumento}>{v.rotulo}</option>
+            {/each}
+          </optgroup>
+        {/each}
+      </select>
+      <div class="text-right text-xs text-gray-500 dark:text-gray-400 shrink-0 leading-tight">
+        <div>{atual.tipo === 'arranjo' ? 'Arranjo' : 'Melodia'}</div>
+        <div>{versoes.indexOf(atual) + 1} de {versoes.length} {versoes.length === 1 ? 'versão' : 'versões'}</div>
+      </div>
     </div>
 
     {#if atual.video}
