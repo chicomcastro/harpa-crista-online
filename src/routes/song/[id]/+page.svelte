@@ -1,8 +1,9 @@
 <script>
   import { page } from '$app/stores';
+  import { browser } from '$app/environment';
   import { base } from '$app/paths';
   import { songs, favorites, fontSize, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
-  import { parseVerses, shareSong, haptic, caixaNormal } from '$lib/utils.js';
+  import { parseVerses, shareSong, haptic, caixaNormal, passoRolagem } from '$lib/utils.js';
   import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import curatedLinks from '../../../../data/links.json';
   import partituras from '../../../../data/partituras.json';
@@ -56,6 +57,8 @@
       recentlyViewed.add(song.number);
       aba = 'letra';
       scrollLetra = 0;
+      pararRolagem();
+      mostrarRolagem = false;
       showSheet = false;
       tocandoAudio = false;
       progresso = 0;
@@ -184,6 +187,80 @@
   let aba = $state('letra');
   let scrollLetra = 0;
 
+  /*
+   * Rolagem automática e tela acesa (#12).
+   *
+   * Tocando num culto as duas mãos estão no instrumento: não dá para rolar a letra, e o celular
+   * apaga sozinho no meio do hino.
+   *
+   * A velocidade é px por SEGUNDO, calculada pelo timestamp do rAF — não por frame. Por frame, o
+   * mesmo nível rolaria o dobro num celular de 120Hz e pararia numa aba em segundo plano, onde o
+   * navegador derruba o rAF para ~1fps. O resto fracionário é acumulado entre frames, porque
+   * scrollBy(0, 0.4) não anda.
+   *
+   * Decisão: o diagnóstico pedia "pausa ao tocar na tela", mas a área da letra já usa o toque para
+   * revelar o botão de compartilhar verso. Um toque que faz as duas coisas é ambíguo, então a pausa
+   * ficou num controle explícito, junto da velocidade.
+   *
+   * O Wake Lock precisa ser pedido dentro do gesto do usuário (não dá para pedir num $effect), e o
+   * navegador o solta sozinho quando a aba perde o foco — por isso o reativamos no visibilitychange.
+   */
+  let rolando = $state(false);
+  let velocidade = $state(2);
+  let mostrarRolagem = $state(false);
+  let wakeLock = null;
+  let rafId = 0;
+  let sobra = 0;
+  let ultimoT = 0;
+
+
+  async function segurarTela() {
+    try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
+  }
+
+  function soltarTela() {
+    try { wakeLock?.release(); } catch {}
+    wakeLock = null;
+  }
+
+  function frame(t) {
+    if (!rolando) return;
+    const dt = ultimoT ? (t - ultimoT) / 1000 : 0;
+    ultimoT = t;
+    const passo = passoRolagem(velocidade, dt, sobra);
+    sobra = passo.sobra;
+    if (passo.px >= 1) {
+      window.scrollBy(0, passo.px);
+      const fim = document.documentElement.scrollHeight - window.innerHeight;
+      if (window.scrollY >= fim - 1) { pararRolagem(); return; }
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function alternarRolagem() {
+    if (rolando) { pararRolagem(); return; }
+    rolando = true;
+    mostrarRolagem = true;
+    sobra = 0;
+    ultimoT = 0;
+    segurarTela();
+    rafId = requestAnimationFrame(frame);
+    track('autoscroll_started', { number: song.number, speed: velocidade });
+  }
+
+  function pararRolagem() {
+    rolando = false;
+    cancelAnimationFrame(rafId);
+    soltarTela();
+  }
+
+  $effect(() => {
+    if (!browser) return;
+    const onVis = () => { if (document.visibilityState === 'visible' && rolando) segurarTela(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { document.removeEventListener('visibilitychange', onVis); pararRolagem(); };
+  });
+
   function trocarAba(nova) {
     if (nova === aba) return;
     if (aba === 'letra') scrollLetra = window.scrollY;
@@ -305,7 +382,7 @@
     </div>
   </div>
 
-  <div class="container mx-auto px-4 pt-3 pb-24 sm:pb-3 max-w-2xl">
+  <div class="container mx-auto px-4 pt-3 pb-24 sm:pb-3 max-w-2xl lg:max-w-5xl">
     <!-- Top bar -->
     <div class="flex items-center justify-between mb-3">
       <button
@@ -319,21 +396,6 @@
         <span class="mi">arrow_back</span>
       </button>
       <div class="flex items-center gap-1">
-        <!-- Font size controls (no celular ficam na barra de baixo) -->
-        <div class="hidden sm:flex items-center gap-1">
-        <button onclick={() => { fontSize.decrease(); track('font_size_changed', { action: 'decrease', size: $fontSize }); }} class="btn-icon" aria-label="Diminuir fonte">
-          <span class="mi mi-sm">remove</span>
-        </button>
-        <button onclick={() => { fontSize.reset(); track('font_size_changed', { action: 'reset', size: $fontSize }); }} class="btn-icon text-xs font-mono text-gray-400 dark:text-gray-500 w-8 text-center" aria-label="Resetar fonte">
-          {$fontSize}
-        </button>
-        <button onclick={() => { fontSize.increase(); track('font_size_changed', { action: 'increase', size: $fontSize }); }} class="btn-icon" aria-label="Aumentar fonte">
-          <span class="mi mi-sm">add</span>
-        </button>
-
-        <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></div>
-        </div>
-
         <!-- Favorite -->
         <button
           onclick={() => { favorites.toggle(song.number); haptic(!isFavorite ? 15 : 8); track('favorite_toggled', { number: song.number, favorited: !isFavorite }); }}
@@ -429,6 +491,7 @@
       </div>
     </div>
 
+    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-10">
     <div class="min-w-0">
     <!-- Song header -->
     <div class="mb-4 flex items-start gap-3" bind:this={titleEl}>
@@ -606,34 +669,77 @@
       <kbd class="border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 font-mono">&rarr;</kbd> para navegar
     </p>
     </div>
+
+    <!-- Painel de ferramentas do desktop (#6): o espaço que sobrava vira o que o músico usa tocando. -->
+    <aside class="hidden lg:block">
+      <div class="sticky top-20 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+        <h2 class="text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-3">Ferramentas</h2>
+
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Rolagem</span>
+          <div class="flex items-center gap-1">
+            <button onclick={() => velocidade = Math.max(1, velocidade - 1)} disabled={velocidade <= 1} class="btn-icon disabled:opacity-30" aria-label="Rolar mais devagar"><span class="mi mi-sm">remove</span></button>
+            <button onclick={alternarRolagem} class="w-11 h-9 flex items-center justify-center rounded-lg {rolando ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}" aria-label={rolando ? 'Pausar rolagem' : 'Iniciar rolagem automática'}>
+              <span class="mi mi-sm">{rolando ? 'pause' : 'play_arrow'}</span>
+            </button>
+            <button onclick={() => velocidade = Math.min(5, velocidade + 1)} disabled={velocidade >= 5} class="btn-icon disabled:opacity-30" aria-label="Rolar mais rápido"><span class="mi mi-sm">add</span></button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Texto</span>
+          <div class="flex items-center gap-1">
+            <button onclick={() => { fontSize.decrease(); track('font_size_changed', { action: 'decrease', size: $fontSize, from: 'panel' }); }} class="btn-icon" aria-label="Diminuir texto"><span class="mi mi-sm">remove</span></button>
+            <button onclick={() => fontSize.reset()} class="w-8 text-xs font-mono text-gray-400" aria-label="Tamanho padrão">{$fontSize}</button>
+            <button onclick={() => { fontSize.increase(); track('font_size_changed', { action: 'increase', size: $fontSize, from: 'panel' }); }} class="btn-icon" aria-label="Aumentar texto"><span class="mi mi-sm">add</span></button>
+          </div>
+        </div>
+
+        <a href="{base}/song/{song.id}/present" onclick={() => track('presentation_opened_nav', { number: song.number, from: 'panel' })}
+          class="flex items-center justify-center gap-1.5 w-full min-h-[44px] rounded-lg bg-gray-100 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700">
+          <span class="mi mi-sm">present_to_all</span> Modo palco
+        </a>
+      </div>
+    </aside>
+    </div>
   </div>
   </div>
 
 
-  <!-- Barra flutuante do celular (como a do Cifra Club): texto, áudio, partitura e opções. -->
+  <!-- Barra do músico (#6): o que se usa tocando, não o que se usa uma vez. -->
   <div class="sm:hidden fixed inset-x-0 bottom-20 z-40 flex justify-center pointer-events-none">
     {#if showFonte}
       <div class="pointer-events-auto absolute bottom-full mb-2 flex items-center gap-1 px-2 py-1.5 rounded-xl bg-gray-900/95 text-white shadow-xl">
-        <button onclick={() => { fontSize.decrease(); track('font_size_changed', { action: 'decrease', size: $fontSize, from: 'bar' }); }} class="w-10 h-10 flex items-center justify-center" aria-label="Diminuir texto"><span class="mi">remove</span></button>
-        <button onclick={() => fontSize.reset()} class="w-10 text-sm font-mono text-gray-300" aria-label="Tamanho padrão">{$fontSize}</button>
-        <button onclick={() => { fontSize.increase(); track('font_size_changed', { action: 'increase', size: $fontSize, from: 'bar' }); }} class="w-10 h-10 flex items-center justify-center" aria-label="Aumentar texto"><span class="mi">add</span></button>
+        <button onclick={() => { fontSize.decrease(); track('font_size_changed', { action: 'decrease', size: $fontSize, from: 'bar' }); }} class="w-11 h-11 flex items-center justify-center" aria-label="Diminuir texto"><span class="mi">remove</span></button>
+        <button onclick={() => fontSize.reset()} class="w-11 text-sm font-mono text-gray-300" aria-label="Tamanho padrão">{$fontSize}</button>
+        <button onclick={() => { fontSize.increase(); track('font_size_changed', { action: 'increase', size: $fontSize, from: 'bar' }); }} class="w-11 h-11 flex items-center justify-center" aria-label="Aumentar texto"><span class="mi">add</span></button>
+      </div>
+    {/if}
+    {#if mostrarRolagem}
+      <div class="pointer-events-auto absolute bottom-full mb-2 flex items-center gap-1 px-2 py-1.5 rounded-xl bg-gray-900/95 text-white shadow-xl">
+        <button onclick={() => velocidade = Math.max(1, velocidade - 1)} disabled={velocidade <= 1} class="w-11 h-11 flex items-center justify-center disabled:opacity-30" aria-label="Rolar mais devagar"><span class="mi">remove</span></button>
+        <button onclick={alternarRolagem} class="w-11 h-11 flex items-center justify-center" aria-label={rolando ? 'Pausar rolagem' : 'Retomar rolagem'}><span class="mi">{rolando ? 'pause' : 'play_arrow'}</span></button>
+        <span class="w-8 text-center text-sm font-mono text-gray-300" aria-hidden="true">{velocidade}</span>
+        <button onclick={() => velocidade = Math.min(5, velocidade + 1)} disabled={velocidade >= 5} class="w-11 h-11 flex items-center justify-center disabled:opacity-30" aria-label="Rolar mais rápido"><span class="mi">add</span></button>
+        <button onclick={() => { pararRolagem(); mostrarRolagem = false; }} class="w-11 h-11 flex items-center justify-center text-gray-400" aria-label="Fechar rolagem"><span class="mi">close</span></button>
       </div>
     {/if}
     <div class="pointer-events-auto relative flex items-stretch px-1.5 py-1 rounded-2xl bg-gray-900/95 text-white shadow-xl ring-1 ring-white/15 backdrop-blur overflow-hidden">
       {#if tocandoAudio || progresso > 0}
         <span class="absolute top-0 left-0 h-0.5 bg-brand-400 transition-[width]" style="width: {progresso * 100}%"></span>
       {/if}
-      <button onclick={() => showFonte = !showFonte} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {showFonte ? 'text-brand-300' : ''}">
-        <span class="mi">format_size</span>Texto
+      <button onclick={() => { showFonte = false; if (rolando) pararRolagem(); else alternarRolagem(); }} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {rolando ? 'text-brand-300' : ''}">
+        <span class="mi">{rolando ? 'pause' : 'arrow_downward'}</span>Rolar
       </button>
+      <button onclick={() => { showFonte = !showFonte; mostrarRolagem = false; }} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {showFonte ? 'text-brand-300' : ''}">
+        <span class="mi">format_size</span>Aa
+      </button>
+      <a href="{base}/song/{song.id}/present" onclick={() => track('presentation_opened_nav', { number: song.number, from: 'bar' })} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5">
+        <span class="mi">present_to_all</span>Palco
+      </a>
       {#if audioPronto}
         <button onclick={alternarAudio} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5 {tocandoAudio ? 'text-brand-300' : ''}">
           <span class="mi">{tocandoAudio ? 'pause' : 'headphones'}</span>{tocandoAudio ? 'Pausar' : 'Ouvir'}
-        </button>
-      {/if}
-      {#if temPartituraPropria}
-        <button onclick={abrirPartituraBarra} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5">
-          <span class="mi">library_music</span>Partitura
         </button>
       {/if}
       <button onclick={() => { showSheet = true; showFonte = false; }} class="flex flex-col items-center justify-center w-16 py-1 text-[11px] gap-0.5">
