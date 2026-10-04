@@ -8,7 +8,9 @@
 
   // `instrumento` fixa a versão inicial (páginas /h/<nº>/<instrumento>, miniatura tocada no celular);
   // sem ele, vale o último escolhido. `autoplay` já abre o player (a pessoa tocou numa miniatura).
-  let { number, instrumento = null, autoplay = false, class: classe = 'mt-8 mb-6' } = $props();
+  // `mostrar` separa as abas Partitura e Vídeo da página do hino sem duplicar o componente — duas
+  // instâncias teriam cada uma a sua escolha de instrumento, e trocar de aba perderia a seleção.
+  let { number, instrumento = null, autoplay = false, mostrar = 'tudo', class: classe = 'mt-8 mb-6' } = $props();
 
   const CHAVE = 'hc_instrumento';
   const hoje = new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
@@ -143,8 +145,8 @@
       </div>
     </div>
 
-    {#if urlVisor}
-      <!-- A pauta é o conteúdo principal da aba; o vídeo fica no dock, atrás de um toque. -->
+    {#if urlVisor && mostrar !== 'video'}
+      <!-- A pauta é o conteúdo principal da aba; o vídeo tem aba própria. -->
       <div class="relative w-full rounded-lg overflow-hidden bg-[#f7f5ef] mb-3" style="aspect-ratio: 1 / 1.1;">
         <iframe
           src={urlVisor}
@@ -161,8 +163,10 @@
       </button>
     {/if}
 
-    {#if atual.video}
+    {#if atual.video && mostrar !== 'partitura'}
       <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black mb-3">
+        <!-- Continua atrás de um toque mesmo na aba Vídeo: o embed pesa ~1 MB, e trocar de aba não
+             deveria soltar som sozinho. -->
         {#if tocando}
           <iframe
             src="https://www.youtube-nocookie.com/embed/{atual.video}?autoplay=1&rel=0"

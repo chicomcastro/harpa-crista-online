@@ -116,7 +116,9 @@
   const hoje = new Date().toLocaleDateString('sv-SE');
   const videos = $derived(song ? (partituras.hinos[String(song.number)]?.versoes || [])
     .filter(v => v.youtube_id && (!v.publicado_em || v.publicado_em <= hoje)) : []);
-  const temExternos = $derived(!!externalLinks.chord || (!!externalLinks.sheet && !temPartituraPropria));
+  // Partitura em site externo convive com a do canal: são acervos diferentes, e às vezes a de fora
+  // tem o arranjo que a nossa não tem. Antes ela sumia quando o hino tinha partitura própria.
+  const temExternos = $derived(!!externalLinks.chord || !!externalLinks.sheet);
   let showSheet = $state(false);
 
   /*
@@ -508,7 +510,7 @@
                     onclick={() => { showMoreMenu = false; track('external_chord_opened', { number: song.number }); }}
                     class="block px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Cifra ↗</a>
                 {/if}
-                {#if externalLinks.sheet && !temPartituraPropria}
+                {#if externalLinks.sheet}
                   <a href={externalLinks.sheet} target="_blank" rel="noreferrer"
                     onclick={() => { showMoreMenu = false; track('external_sheet_opened', { number: song.number }); }}
                     class="block px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Partitura ↗</a>
@@ -532,22 +534,38 @@
       </div>
     </div>
 
-    <!-- Abas: Letra sempre; Partitura só quando existe; Cifra é link externo, não aba (#4). -->
-    <div class="flex items-center gap-2 mb-5 flex-wrap">
-      <div class="inline-flex p-1 rounded-xl bg-gray-100 dark:bg-gray-900" role="tablist" aria-label="Conteúdo do hino">
+    <!--
+      Abas numa linha só, mesma altura (#4 + feedback). A Cifra continua sendo link externo, mas
+      quebrar linha fazia ela parecer de outra família; agora fica ao lado, com a mesma caixa e o ↗
+      dizendo que sai do app. "site externo" some no celular, onde o espaço não dá.
+
+      Vídeo é aba: estava empilhado embaixo da partitura, e são duas formas de consumir a mesma
+      coisa — ou se lê a pauta, ou se assiste. Um Partituras só serve as duas, senão cada aba teria
+      a sua escolha de instrumento.
+    -->
+    <div class="flex items-center gap-2 mb-5 flex-nowrap overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div class="inline-flex shrink-0 p-1 rounded-xl bg-gray-100 dark:bg-gray-900" role="tablist" aria-label="Conteúdo do hino">
         <button
           role="tab"
           aria-selected={aba === 'letra'}
           onclick={() => trocarAba('letra')}
-          class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {aba === 'letra' ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}"
+          class="h-10 px-3 sm:px-4 text-sm font-medium rounded-lg transition-colors {aba === 'letra' ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}"
         >Letra</button>
         {#if temPartituraPropria}
           <button
             role="tab"
             aria-selected={aba === 'partitura'}
             onclick={() => trocarAba('partitura')}
-            class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {aba === 'partitura' ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}"
+            class="h-10 px-3 sm:px-4 text-sm font-medium rounded-lg transition-colors {aba === 'partitura' ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}"
           >Partitura</button>
+        {/if}
+        {#if videos.length}
+          <button
+            role="tab"
+            aria-selected={aba === 'video'}
+            onclick={() => trocarAba('video')}
+            class="h-10 px-3 sm:px-4 text-sm font-medium rounded-lg transition-colors {aba === 'video' ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}"
+          >Vídeo</button>
         {/if}
       </div>
       {#if externalLinks.chord}
@@ -556,14 +574,14 @@
           target="_blank"
           rel="noreferrer"
           onclick={() => track('external_chord_opened', { number: song.number, from: 'chip' })}
-          class="inline-flex items-baseline gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-        >Cifra <span class="text-xs text-gray-400 dark:text-gray-500">site externo ↗</span></a>
+          class="shrink-0 inline-flex items-center gap-1.5 h-10 px-3 sm:px-4 text-sm font-medium rounded-xl border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+        >Cifra <span class="hidden sm:inline text-xs text-gray-400 dark:text-gray-500">site externo</span> <span class="text-gray-400">↗</span></a>
       {/if}
     </div>
 
     {#if temPartituraPropria}
-      <div class={aba === 'partitura' ? '' : 'hidden'}>
-        <Partituras number={song.number} class="mb-6" />
+      <div class={aba === 'partitura' || aba === 'video' ? '' : 'hidden'}>
+        <Partituras number={song.number} mostrar={aba === 'video' ? 'video' : 'partitura'} class="mb-6" />
       </div>
     {/if}
 
@@ -799,7 +817,7 @@
           {#if externalLinks.chord}
             <a href={externalLinks.chord} target="_blank" rel="noreferrer" onclick={() => track('external_chord_opened', { number: song.number, from: 'sheet' })} class="sheet-item"><span class="mi">music_note</span>Cifra ↗</a>
           {/if}
-          {#if externalLinks.sheet && !temPartituraPropria}
+          {#if externalLinks.sheet}
             <a href={externalLinks.sheet} target="_blank" rel="noreferrer" onclick={() => track('external_sheet_opened', { number: song.number, from: 'sheet' })} class="sheet-item"><span class="mi">library_music</span>Partitura ↗</a>
           {/if}
         {/if}
