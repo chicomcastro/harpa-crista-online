@@ -22,7 +22,17 @@
   const IMAGEM_PROPRIA = new Set(['/h/[number]/[instrumento]']);
   const seoProprio = $derived(SEO_PROPRIO.has($page.route.id));
 
-  let jumpNumber = $state('');
+  /*
+   * Busca única no header (#13).
+   *
+   * Havia um "Ir para nº" separado da busca, e a busca da home já aceita número: dois campos para a
+   * mesma intenção, e no celular o "Ir para nº" nem aparecia.
+   *
+   * Tirar o campo sem repor deixaria quem está numa página de hino sem acesso rápido à busca — daí
+   * o campo do header agora é a busca inteira, e não só número. Número puro vai direto para o hino;
+   * o resto cai na home com ?q=, onde a busca por trecho já existe.
+   */
+  let busca = $state('');
   let showToTop = $state(false);
 
   function scrollToTop() {
@@ -35,12 +45,18 @@
     return () => window.removeEventListener('scroll', onScroll);
   });
 
-  function handleJump(e) {
+  function handleBusca(e) {
     e.preventDefault();
-    const n = parseInt(jumpNumber);
-    if (!n || n < 1) return;
-    jumpNumber = '';
-    window.location.href = `${base}/h/${n}`;
+    const q = busca.trim();
+    if (!q) return;
+    busca = '';
+    const n = /^\d{1,3}$/.test(q) ? parseInt(q) : null;
+    if (n && n >= 1 && n <= 640) {
+      track('search_enter', { query: q, number: n, from: 'header' });
+      window.location.href = `${base}/h/${n}`;
+      return;
+    }
+    window.location.href = `${base}/?q=${encodeURIComponent(q)}`;
   }
 
   onMount(async () => {
@@ -93,16 +109,21 @@
       </a>
 
       <div class="flex items-center gap-1">
-      <form onsubmit={handleJump} class="hidden sm:block">
+      <form onsubmit={handleBusca} class="hidden sm:block relative">
+        <label class="sr-only" for="busca-header">Pesquisar hino</label>
+        <span class="mi mi-sm absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">search</span>
         <input
-          bind:value={jumpNumber}
-          type="number"
-          min="1"
-          max="640"
-          placeholder="Ir para nº"
-          class="w-28 px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-brand-500 [&::-webkit-inner-spin-button]:appearance-none"
+          id="busca-header"
+          bind:value={busca}
+          type="search"
+          placeholder="Nº, título ou trecho"
+          class="w-56 pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
       </form>
+      <!-- No celular o header é estreito: um atalho leva para a busca da home, que é a mesma. -->
+      <a href="{base}/#search" class="sm:hidden btn-icon text-gray-500 dark:text-gray-400" aria-label="Pesquisar hino">
+        <span class="mi">search</span>
+      </a>
       <a href="{base}/playlists" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isListas ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Listas">Listas</a>
       <a href="{base}/?favs=1" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isFavoritos ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Favoritos">Favoritos</a>
       <button

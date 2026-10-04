@@ -183,7 +183,7 @@
           window.location.href = `${base}/song/${top.id}`;
         }
       }}
-      placeholder="Pesquisar hino (nº ou título)"
+      placeholder="Nº, título ou trecho da letra"
       class="w-full pl-10 pr-20 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-base transition-shadow shadow-sm focus:shadow-md"
     />
     <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
