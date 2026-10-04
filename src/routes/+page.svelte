@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { browser } from '$app/environment';
-  import { songs, favorites, recentlyViewed } from '$lib/stores.js';
+  import { songs, favorites, recentlyViewed, playlists } from '$lib/stores.js';
   import { getPreview, highlightMatch, searchSongs, hymnOfTheDay, encodeNumbers, decodeNumbers, haptic, parseVerses } from '$lib/utils.js';
   import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import { audioCacheStatus, downloadAudios, clearAudioCache, refreshAudioCacheStatus } from '$lib/offline-audio.js';
@@ -53,6 +53,40 @@
   let toast = $state('');
 
   const dailyHymn = $derived(hymnOfTheDay(songs));
+
+  /*
+   * Próximo culto no lugar do Hino do dia (#14).
+   *
+   * O Hino do dia ocupava o lugar mais nobre da home. É bom para quem lê devocional e irrelevante
+   * para quem abriu o app no ensaio — e o usuário principal do produto é o músico da igreja.
+   *
+   * Ele não sumiu: só desceu para depois da lista do culto, e continua aparecendo sozinho quando
+   * não há culto marcado.
+   */
+  const hoje = new Date().toLocaleDateString('sv-SE');
+  const proximoCulto = $derived(
+    $playlists
+      .filter(p => p.data && p.data >= hoje && p.numbers.length)
+      .sort((a, b) => a.data.localeCompare(b.data))[0] ?? null
+  );
+  const hinosDoCulto = $derived(
+    proximoCulto ? proximoCulto.numbers.map(n => songs.find(s => s.number === n)).filter(Boolean).slice(0, 4) : []
+  );
+  const dataCulto = $derived(
+    proximoCulto ? new Date(proximoCulto.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''
+  );
+
+  // Novo no canal: a versão publicada mais recente do partituras.json.
+  const novoNoCanal = $derived.by(() => {
+    let melhor = null;
+    for (const [n, h] of Object.entries(partituras.hinos)) {
+      for (const v of h.versoes) {
+        if (!v.publicado_em || v.publicado_em > hoje) continue;
+        if (!melhor || v.publicado_em > melhor.publicado_em) melhor = { ...v, numero: Number(n), nome: h.nome };
+      }
+    }
+    return melhor;
+  });
   const recentSongs = $derived($recentlyViewed.map(n => songs.find(s => s.number === n)).filter(Boolean).slice(0, 6));
 
   // Ranked filtered list
@@ -214,7 +248,49 @@
   </div>
 
   {#if !searchQuery && !showFavoritesOnly}
-    <!-- Hino do dia -->
+    <!-- Próximo culto: o lugar mais nobre da home é de quem vai tocar. -->
+    {#if proximoCulto}
+      <div class="mb-6 p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div class="flex items-baseline justify-between gap-3 mb-2">
+          <span class="text-[10px] uppercase tracking-widest text-brand-600 dark:text-brand-400 font-semibold">Próximo culto</span>
+          <a href="{base}/playlists/{proximoCulto.id}" class="text-xs text-brand-600 dark:text-brand-400 hover:underline">Ver lista</a>
+        </div>
+        <div class="font-semibold text-gray-800 dark:text-gray-100 mb-3 first-letter:uppercase">{dataCulto}</div>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+          {#each hinosDoCulto as s (s.number)}
+            <li>
+              <a href="{base}/song/{s.id}" class="flex items-center gap-3 py-2">
+                <span class="w-10 shrink-0 text-right tabular-nums text-sm font-semibold text-brand-600 dark:text-brand-400">{s.number}</span>
+                <span class="flex-1 min-w-0 truncate text-gray-800 dark:text-gray-200">{s.title}</span>
+                {#if proximoCulto.tons?.[s.number]}
+                  <span class="shrink-0 w-9 h-7 flex items-center justify-center rounded-md bg-[#F7B955]/15 text-[#F7B955] text-sm font-bold">{proximoCulto.tons[s.number]}</span>
+                {/if}
+              </a>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+
+    <!-- Novo no canal -->
+    {#if novoNoCanal}
+      <a
+        href="{base}/h/{novoNoCanal.numero}/{novoNoCanal.instrumento}"
+        onclick={() => track('novo_no_canal_opened', { number: novoNoCanal.numero, instrument: novoNoCanal.instrumento })}
+        class="flex items-center gap-3 mb-6 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
+      >
+        {#if novoNoCanal.youtube_id}
+          <img src="https://i.ytimg.com/vi/{novoNoCanal.youtube_id}/mqdefault.jpg" alt="" loading="lazy" class="shrink-0 w-24 aspect-video object-cover rounded-lg" />
+        {/if}
+        <span class="min-w-0 flex-1">
+          <span class="block text-[10px] uppercase tracking-widest text-[#FF8A7A] font-semibold">Novo no canal</span>
+          <span class="block font-semibold text-gray-800 dark:text-gray-100 truncate">{novoNoCanal.nome} · {novoNoCanal.rotulo}</span>
+          <span class="block text-xs text-gray-500 dark:text-gray-400">Partitura + vídeo</span>
+        </span>
+      </a>
+    {/if}
+
+    <!-- Hino do dia: desceu de posição, mas continua -->
     {#if dailyHymn}
       <a
         href="{base}/song/{dailyHymn.id}"
