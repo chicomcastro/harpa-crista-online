@@ -3,7 +3,8 @@
   import { base } from '$app/paths';
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
-  import { darkMode } from '$lib/stores.js';
+  import { darkMode, songs } from '$lib/stores.js';
+  import { searchSongs, getPreview } from '$lib/utils.js';
   import { initAnalytics, track, trackExternalEntry } from '$lib/analytics.js';
   import { onMount } from 'svelte';
 
@@ -23,7 +24,71 @@
   const seoProprio = $derived(SEO_PROPRIO.has($page.route.id));
 
   /*
-   * Busca única no header (#13).
+   * Busca no header: abre no lugar, sem sair do hino.
+   *
+   * Antes a lupa do celular era um link para a home — quem estava lendo um hino perdia o hino para
+   * poder buscar, e voltar era mais um passo. Agora a caixa entra por cima do header, deslizando da
+   * direita e ocupando o lugar do logo e do botão de tema; sair devolve a página como estava.
+   *
+   * O dropdown mostra resultado enquanto se digita e as últimas buscas quando o campo está vazio —
+   * é o que transforma a busca em navegação, e não só em filtro.
+   */
+  const CHAVE_RECENTES = 'hc_buscas_recentes';
+  const MAX_RECENTES = 6;
+  const SECOES = [
+    { nome: 'Listas de culto', href: '/playlists', icone: 'queue_music' },
+    { nome: 'Favoritos', href: '/?favs=1', icone: 'favorite' },
+    { nome: 'Com partitura', href: '/?part=1', icone: 'library_music' },
+    { nome: 'Sobre o app', href: '/sobre', icone: 'music_note' }
+  ];
+
+  let busca = $state('');
+  let buscaAberta = $state(false);
+  let campoBusca = $state(null);
+  let recentes = $state([]);
+
+  const resultados = $derived(
+    busca.trim() ? searchSongs(songs, busca).slice(0, 8) : []
+  );
+  const secoesFiltradas = $derived.by(() => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return [];
+    return SECOES.filter(s => s.nome.toLowerCase().includes(q));
+  });
+
+  function lerRecentes() {
+    try { return JSON.parse(localStorage.getItem(CHAVE_RECENTES) || '[]'); } catch { return []; }
+  }
+
+  function guardarRecente(q) {
+    const limpo = q.trim();
+    if (!limpo) return;
+    const lista = [limpo, ...lerRecentes().filter(r => r.toLowerCase() !== limpo.toLowerCase())].slice(0, MAX_RECENTES);
+    try { localStorage.setItem(CHAVE_RECENTES, JSON.stringify(lista)); } catch {}
+    recentes = lista;
+  }
+
+  function abrirBusca() {
+    recentes = lerRecentes();
+    buscaAberta = true;
+    track('header_search_opened', { from: $page.route.id });
+    setTimeout(() => campoBusca?.focus(), 180); // depois da animação, senão o teclado corta o slide
+  }
+
+  function fecharBusca() {
+    buscaAberta = false;
+    busca = '';
+  }
+
+  function irPara(href, rotulo) {
+    guardarRecente(busca);
+    fecharBusca();
+    window.location.href = base + href;
+    track('header_search_navigated', { to: rotulo });
+  }
+
+  /*
+   * Busca única (#13).
    *
    * Havia um "Ir para nº" separado da busca, e a busca da home já aceita número: dois campos para a
    * mesma intenção, e no celular o "Ir para nº" nem aparecia.
@@ -32,7 +97,6 @@
    * o campo do header agora é a busca inteira, e não só número. Número puro vai direto para o hino;
    * o resto cai na home com ?q=, onde a busca por trecho já existe.
    */
-  let busca = $state('');
   let showToTop = $state(false);
 
   function scrollToTop() {
@@ -49,14 +113,17 @@
     e.preventDefault();
     const q = busca.trim();
     if (!q) return;
-    busca = '';
+    guardarRecente(q);
     const n = /^\d{1,3}$/.test(q) ? parseInt(q) : null;
-    if (n && n >= 1 && n <= 640) {
-      track('search_enter', { query: q, number: n, from: 'header' });
-      window.location.href = `${base}/h/${n}`;
-      return;
-    }
-    window.location.href = `${base}/?q=${encodeURIComponent(q)}`;
+    const alvo = n && n >= 1 && n <= 640
+      ? `${base}/h/${n}`
+      : resultados.length
+        ? `${base}/song/${resultados[0].song.id}`
+        : `${base}/?q=${encodeURIComponent(q)}`;
+    track('search_enter', { query: q, number: n, from: 'header' });
+    busca = '';
+    buscaAberta = false;
+    window.location.href = alvo;
   }
 
   onMount(async () => {
@@ -102,40 +169,101 @@
 <div class="min-h-screen flex flex-col">
   {#if !hideChrome}
   <header class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 safe-top">
-    <div class="container mx-auto px-4 h-14 flex items-center justify-between">
-      <a href="{base}/" class="flex items-center gap-2 font-bold text-lg text-brand-700 dark:text-brand-400">
-        <span class="mi">music_note</span>
-        Harpa Cristã
-      </a>
+    <div class="relative container mx-auto px-4 h-14 flex items-center justify-between">
+      <!-- Conteúdo normal: some quando a busca entra, para não aparecer por baixo dela. -->
+      <div class="contents {buscaAberta ? 'invisible' : ''}" aria-hidden={buscaAberta}>
+        <a href="{base}/" class="flex items-center gap-2 font-bold text-lg text-brand-700 dark:text-brand-400">
+          <span class="mi">music_note</span>
+          Harpa Cristã
+        </a>
 
-      <div class="flex items-center gap-1">
-      <form onsubmit={handleBusca} class="hidden sm:block relative">
-        <label class="sr-only" for="busca-header">Pesquisar hino</label>
-        <span class="mi mi-sm absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">search</span>
-        <input
-          id="busca-header"
-          bind:value={busca}
-          type="search"
-          placeholder="Nº, título ou trecho"
-          class="w-56 pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
-      </form>
-      <!-- No celular o header é estreito: um atalho leva para a busca da home, que é a mesma. -->
-      <a href="{base}/#search" class="sm:hidden btn-icon text-gray-500 dark:text-gray-400" aria-label="Pesquisar hino">
-        <span class="mi">search</span>
-      </a>
-      <a href="{base}/playlists" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isListas ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Listas">Listas</a>
-      <a href="{base}/?favs=1" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isFavoritos ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Favoritos">Favoritos</a>
-      <button
-        onclick={() => { darkMode.toggle(); track('dark_mode_toggled', { enabled: !$darkMode }); }}
-        class="btn-icon"
-        aria-label={$darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
+        <div class="flex items-center gap-1">
+          <button onclick={abrirBusca} class="btn-icon text-gray-500 dark:text-gray-400" aria-label="Pesquisar hino">
+            <span class="mi">search</span>
+          </button>
+          <a href="{base}/playlists" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isListas ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Listas">Listas</a>
+          <a href="{base}/?favs=1" class="text-sm px-3 py-1.5 rounded-lg hidden sm:inline-block {isFavoritos ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}" aria-label="Favoritos">Favoritos</a>
+          <button
+            onclick={() => { darkMode.toggle(); track('dark_mode_toggled', { enabled: !$darkMode }); }}
+            class="btn-icon"
+            aria-label={$darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
+          >
+            <span class="mi">{$darkMode ? 'light_mode' : 'dark_mode'}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Caixa de busca: entra da direita por cima do logo e do tema. -->
+      <div
+        class="absolute inset-y-0 left-0 right-0 px-4 flex items-center gap-2 bg-white dark:bg-gray-900
+          transition-transform duration-200 ease-out motion-reduce:transition-none
+          {buscaAberta ? 'translate-x-0' : 'translate-x-full pointer-events-none'}"
       >
-        <span class="mi">{$darkMode ? 'light_mode' : 'dark_mode'}</span>
-      </button>
+        <form onsubmit={handleBusca} class="flex-1 min-w-0 relative">
+          <label class="sr-only" for="busca-header">Pesquisar hino</label>
+          <span class="mi mi-sm absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">search</span>
+          <input
+            id="busca-header"
+            bind:this={campoBusca}
+            bind:value={busca}
+            type="search"
+            enterkeyhint="search"
+            placeholder="Nº, título ou trecho da letra"
+            onkeydown={(e) => { if (e.key === 'Escape') fecharBusca(); }}
+            class="w-full h-10 pl-10 pr-3 text-base rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+        </form>
+        <button onclick={fecharBusca} class="btn-icon shrink-0 text-gray-500 dark:text-gray-400" aria-label="Fechar busca">
+          <span class="mi">close</span>
+        </button>
       </div>
     </div>
+
   </header>
+
+    {#if buscaAberta}
+      <!-- Dropdown: resultado enquanto digita, últimas buscas quando vazio. -->
+      <div class="fixed inset-x-0 top-14 z-[55] max-h-[70vh] overflow-y-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-xl">
+        {#if busca.trim()}
+          {#if secoesFiltradas.length}
+            <div class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-widest text-gray-400">Ir para</div>
+            {#each secoesFiltradas as s (s.href)}
+              <button onclick={() => irPara(s.href, s.nome)} class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 text-left">
+                <span class="mi mi-sm text-gray-400">{s.icone}</span>
+                <span class="text-sm text-gray-800 dark:text-gray-200">{s.nome}</span>
+              </button>
+            {/each}
+          {/if}
+          {#if resultados.length}
+            <div class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-widest text-gray-400">Hinos</div>
+            {#each resultados as { song, snippet } (song.id)}
+              <button onclick={() => irPara(`/song/${song.id}`, `hino ${song.number}`)} class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 text-left">
+                <span class="w-9 shrink-0 text-right tabular-nums text-sm font-semibold text-brand-600 dark:text-brand-400">{song.number}</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{song.title}</span>
+                  <span class="block text-xs text-gray-400 truncate">{snippet || getPreview(song.content)}</span>
+                </span>
+              </button>
+            {/each}
+          {:else if !secoesFiltradas.length}
+            <p class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Nenhum hino encontrado</p>
+          {/if}
+        {:else if recentes.length}
+          <div class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-widest text-gray-400">Buscas recentes</div>
+          {#each recentes as r (r)}
+            <button onclick={() => { busca = r; campoBusca?.focus(); }} class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 text-left">
+              <span class="mi mi-sm text-gray-400">search</span>
+              <span class="text-sm text-gray-800 dark:text-gray-200 truncate">{r}</span>
+            </button>
+          {/each}
+        {:else}
+          <p class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Digite o número, o título ou um trecho da letra</p>
+        {/if}
+      </div>
+
+      <!-- Clicar fora fecha sem mexer na página. -->
+      <button class="fixed inset-0 top-14 z-[54] cursor-default" onclick={fecharBusca} aria-label="Fechar busca" tabindex="-1"></button>
+  {/if}
   {/if}
 
   <main class="flex-1 {!hideChrome ? 'pb-16 sm:pb-0' : ''}">
