@@ -1,6 +1,8 @@
 <script>
   import { base } from '$app/paths';
   import { track } from '$lib/analytics.js';
+  import { page } from '$app/stores';
+  import { browser } from '$app/environment';
   import { parseVerses, caixaNormal } from '$lib/utils.js';
   import partituras from '../../../../../data/partituras.json';
 
@@ -33,6 +35,22 @@
   const urlVisor = $derived(idDrive ? `https://drive.google.com/file/d/${idDrive}/preview` : null);
   let telaCheia = $state(false);
   let tocando = $state(false);
+
+  /*
+   * Esta página serve duas chegadas opostas.
+   *
+   * Vindo da descrição de um vídeo do YouTube, a pessoa JÁ assistiu: o que ela quer é o PDF, e por
+   * isso ele é a ação primária. Vindo do card "Novo no canal" da home, ela clicou justamente para
+   * ver a novidade — ali o vídeo é o conteúdo, e o PDF vem depois.
+   *
+   * Quem manda é o `?ver=video` que a home põe no link. A ordem é feita com `order` do flex, não
+   * com dois blocos condicionais: a página é pré-renderizada e o parâmetro só existe no cliente,
+   * então remontar trocaria os iframes de lugar e faria a pauta recarregar depois da hidratação.
+   *
+   * O `browser` não é decoração: a página é prerenderizada, e ler searchParams no servidor quebra
+   * o build com "Cannot access url.searchParams on a page with prerendering enabled".
+   */
+  const videoPrimeiro = $derived(browser && $page.url.searchParams.get('ver') === 'video' && publicado);
 
   const publicado = $derived(versao.youtube_id && versao.publicado_em && versao.publicado_em <= new Date().toISOString().slice(0, 10));
   const descricao = $derived(
@@ -83,8 +101,9 @@
     Partitura para {rotulo} · Hino {song.number}{nomeDiferente ? ` (no hinário, “${tituloApp}”)` : ''}
   </p>
 
+  <div class="flex flex-col">
   <!-- Ação primária acima da dobra: é o que a pessoa veio buscar. -->
-  <div class="flex flex-col sm:flex-row gap-2 mb-5">
+  <div class="flex flex-col sm:flex-row gap-2 mb-5 {videoPrimeiro ? 'order-2' : ''}">
     {#if versao.pdf_url}
       <a
         href={versao.pdf_url}
@@ -111,17 +130,17 @@
     largura cobre a pauta. Então a prévia aparece no tamanho em que dá para ler mesmo.
   -->
   {#if urlVisor}
-    <div class="relative w-full rounded-xl overflow-hidden bg-[#f7f5ef] border border-gray-200 dark:border-gray-800 mb-2" style="aspect-ratio: 1 / 1.1;">
+    <div class="relative w-full rounded-xl overflow-hidden bg-[#f7f5ef] border border-gray-200 dark:border-gray-800 mb-2 {videoPrimeiro ? 'order-3' : ''}" style="aspect-ratio: 1 / 1.1;">
       <iframe src={urlVisor} title="Partitura de {nome} para {rotulo}" loading="lazy" class="absolute inset-0 w-full h-full"></iframe>
     </div>
-    <p class="text-xs text-gray-400 dark:text-gray-500 mb-8">
+    <p class="text-xs text-gray-400 dark:text-gray-500 mb-8 {videoPrimeiro ? 'order-4' : ''}">
       {versao.tipo === 'arranjo' ? 'Arranjo' : 'Melodia'}{publicado ? ' · com vídeo' : ''}
     </p>
   {/if}
 
   {#if publicado}
-    <h2 class="text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-2">Ouvir online</h2>
-    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black mb-8">
+    <h2 class="text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-2 {videoPrimeiro ? 'order-0' : ''}">{videoPrimeiro ? 'Novo no canal' : 'Ouvir online'}</h2>
+    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black mb-8 {videoPrimeiro ? 'order-1' : ''}">
       {#if tocando}
         <iframe
           src="https://www.youtube-nocookie.com/embed/{versao.youtube_id}?autoplay=1&rel=0"
@@ -142,6 +161,8 @@
       {/if}
     </div>
   {/if}
+
+  </div>
 
   {#if outras.length}
     <h2 class="text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-2">Também para</h2>
