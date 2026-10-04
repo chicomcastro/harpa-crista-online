@@ -18,6 +18,10 @@ Todos os 640 hinos da Harpa Cristã em uma aplicação web leve, rápida e offli
 - **Player de áudio** — reprodução do hino com áudio externo (quando disponível)
 - **Responsivo** — funciona em celular, tablet e desktop
 
+## Design
+
+Revisão de UX/UI, mapa do produto e roadmap de telas em [`docs/ux/`](docs/ux/README.md).
+
 ## Stack
 
 - [SvelteKit](https://kit.svelte.dev/) + [Svelte 5](https://svelte.dev/)
