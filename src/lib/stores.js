@@ -118,7 +118,17 @@ function createRecentlyViewed(limit = 30) {
 }
 export const recentlyViewed = createRecentlyViewed();
 
-/** Playlists — named ordered lists of hymn numbers */
+/*
+ * Playlists — listas ordenadas de hinos, com tom por hino e data opcional (#14).
+ *
+ * `tons` e `data` entram sem migração: lista antiga simplesmente não tem os campos, e tudo que lê
+ * usa `?? {}` / `?? null`. Não dá para reescrever o localStorage de quem já usa o app, então o
+ * formato velho tem que continuar válido.
+ *
+ * Tom é a informação que o músico mais precisa ao montar o culto, e hoje ele anota no papel.
+ */
+export const TONS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
 function createPlaylists() {
   const initial = browser ? JSON.parse(localStorage.getItem('playlists') || '[]') : [];
   const { subscribe, update } = writable(initial);
@@ -129,7 +139,7 @@ function createPlaylists() {
     create(name) {
       const id = crypto.randomUUID();
       update(list => {
-        const next = [...list, { id, name, numbers: [], createdAt: Date.now() }];
+        const next = [...list, { id, name, numbers: [], tons: {}, data: null, createdAt: Date.now() }];
         persist(next);
         return next;
       });
@@ -163,6 +173,20 @@ function createPlaylists() {
         const next = list.map(p => p.id === id
           ? { ...p, numbers: p.numbers.filter(n => n !== number) }
           : p);
+        persist(next);
+        return next;
+      });
+    },
+    setTom(id, number, tom) {
+      update(list => {
+        const next = list.map(p => p.id === id ? { ...p, tons: { ...(p.tons ?? {}), [number]: tom } } : p);
+        persist(next);
+        return next;
+      });
+    },
+    setData(id, data) {
+      update(list => {
+        const next = list.map(p => p.id === id ? { ...p, data: data || null } : p);
         persist(next);
         return next;
       });

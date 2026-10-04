@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { base } from '$app/paths';
   import { goto } from '$app/navigation';
-  import { songs, playlists } from '$lib/stores.js';
+  import { songs, playlists, TONS } from '$lib/stores.js';
   import { searchSongs, encodePlaylist } from '$lib/utils.js';
   import { track } from '$lib/analytics.js';
 
@@ -25,6 +25,17 @@
     playlists.removeSong(pl.id, number);
     track('playlist_song_removed', { playlist: pl.name, number });
   }
+  // Data do culto: o card "Próximo culto" da home escolhe a lista com a data futura mais próxima.
+  function setData(e) {
+    playlists.setData(pl.id, e.currentTarget.value);
+    track('playlist_date_set', { playlist: pl.name });
+  }
+
+  function setTom(number, e) {
+    playlists.setTom(pl.id, number, e.currentTarget.value);
+    track('playlist_tom_set', { playlist: pl.name, number, tom: e.currentTarget.value });
+  }
+
   function move(idx, delta) {
     const next = [...pl.numbers];
     const target = idx + delta;
@@ -110,6 +121,27 @@
       <p class="text-xs text-brand-600 dark:text-brand-400 -mt-4 mb-4">{shareStatus}</p>
     {/if}
 
+    <div class="flex items-center gap-2 mb-6">
+      <label for="data-culto" class="text-sm text-gray-500 dark:text-gray-400">Data do culto</label>
+      <input
+        id="data-culto"
+        type="date"
+        value={pl.data ?? ''}
+        onchange={setData}
+        class="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+      />
+    </div>
+
+    {#if items.length > 0}
+      <a
+        href="{base}/playlists/{pl.id}/present"
+        onclick={() => track('presentation_opened_nav', { from: 'playlist' })}
+        class="flex items-center justify-center gap-2 w-full min-h-[48px] mb-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold"
+      >
+        <span class="mi mi-sm">present_to_all</span> Iniciar modo palco
+      </a>
+    {/if}
+
     <!-- Add -->
     <div class="relative mb-6">
       <input
@@ -154,6 +186,16 @@
             <a href="{base}/song/{song.id}" class="flex-1 min-w-0">
               <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">#{song.number} {song.title}</div>
             </a>
+            <label class="sr-only" for="tom-{song.number}">Tom de {song.title}</label>
+            <select
+              id="tom-{song.number}"
+              value={pl.tons?.[song.number] ?? ''}
+              onchange={(e) => setTom(song.number, e)}
+              class="shrink-0 w-16 h-9 px-2 text-sm font-semibold rounded-lg border text-center {pl.tons?.[song.number] ? 'border-[#F7B955] text-[#F7B955]' : 'border-gray-300 dark:border-gray-700 text-gray-400'} bg-transparent"
+            >
+              <option value="">Tom</option>
+              {#each TONS as t}<option value={t}>{t}</option>{/each}
+            </select>
             <button onclick={() => move(i, -1)} disabled={i === 0} class="btn-icon disabled:opacity-20" aria-label="Subir"><span class="mi mi-sm">arrow_upward</span></button>
             <button onclick={() => move(i, 1)} disabled={i === items.length - 1} class="btn-icon disabled:opacity-20" aria-label="Descer"><span class="mi mi-sm">arrow_downward</span></button>
             <button onclick={() => removeSong(song.number)} class="btn-icon text-red-500" aria-label="Remover"><span class="mi mi-sm">close</span></button>
