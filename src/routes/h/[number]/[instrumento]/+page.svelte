@@ -1,6 +1,6 @@
 <script>
   import { base } from '$app/paths';
-  import { parseVerses } from '$lib/utils.js';
+  import { parseVerses, caixaNormal } from '$lib/utils.js';
   import Partituras from '$lib/components/Partituras.svelte';
 
   let { data } = $props();
@@ -89,8 +89,11 @@
   <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">Letra</h2>
   <div class="font-serif text-gray-700 dark:text-gray-300 mb-3" style="line-height: 1.7;">
     {#each trecho as verse}
-      <div class="mb-4 {verse.isChorus ? 'pl-4 border-l-2 border-brand-300 dark:border-brand-700 italic' : ''}">
-        {#each verse.lines as line}<p>{line}</p>{/each}
+      <div class="mb-4 {verse.isChorus ? 'pl-4 border-l-2 border-brand-300 dark:border-brand-700' : ''}">
+        {#if verse.isChorus}
+          <div class="text-[11px] uppercase tracking-widest text-brand-600 dark:text-brand-400 font-semibold font-sans mb-1">Refrão</div>
+        {/if}
+        {#each verse.lines as line}<p>{verse.isChorus ? caixaNormal(line) : line}</p>{/each}
       </div>
     {/each}
   </div>

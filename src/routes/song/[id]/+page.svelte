@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { base } from '$app/paths';
   import { songs, favorites, fontSize, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
-  import { parseVerses, shareSong, haptic } from '$lib/utils.js';
+  import { parseVerses, shareSong, haptic, caixaNormal } from '$lib/utils.js';
   import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import curatedLinks from '../../../../data/links.json';
   import partituras from '../../../../data/partituras.json';
@@ -463,10 +463,13 @@
           tabindex="0"
           onclick={() => revealedVerse = revealedVerse === i ? -1 : i}
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); revealedVerse = revealedVerse === i ? -1 : i; } }}
-          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 cursor-pointer {activeVerse === i ? 'bg-brand-50/60 dark:bg-brand-950/40' : ''} {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700 italic text-gray-600 dark:text-gray-400' : ''}"
+          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 cursor-pointer {activeVerse === i ? 'bg-brand-50/60 dark:bg-brand-950/40' : ''} {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700' : ''}"
         >
+          {#if verse.isChorus}
+            <div class="text-[11px] uppercase tracking-widest text-brand-600 dark:text-brand-400 font-semibold font-sans mb-1">Refrão</div>
+          {/if}
           {#each verse.lines as line}
-            <p class="mb-0.5">{line}</p>
+            <p class="mb-0.5">{verse.isChorus ? caixaNormal(line) : line}</p>
           {/each}
           <button
             onclick={(e) => { e.stopPropagation(); previewVerse = verse; revealedVerse = -1; }}
