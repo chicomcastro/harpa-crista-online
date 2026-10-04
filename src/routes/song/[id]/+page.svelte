@@ -118,6 +118,8 @@
     .filter(v => v.youtube_id && (!v.publicado_em || v.publicado_em <= hoje)) : []);
   // Partitura em site externo convive com a do canal: são acervos diferentes, e às vezes a de fora
   // tem o arranjo que a nossa não tem. Antes ela sumia quando o hino tinha partitura própria.
+  const temRefrao = $derived(verses.some(v => v.isChorus));
+  const qtdVersoes = $derived(partituras.hinos[String(song?.number)]?.versoes?.length || 0);
   const temExternos = $derived(!!externalLinks.chord || !!externalLinks.sheet);
   let showSheet = $state(false);
 
@@ -414,97 +416,91 @@
   </div>
 
   <div class="container mx-auto px-4 pt-3 pb-24 sm:pb-3 max-w-2xl lg:max-w-5xl">
-    <!-- Top bar -->
-    <div class="flex items-center justify-between mb-3">
+    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-10">
+    <div class="min-w-0">
+    <div class="mb-3">
       <button
         onclick={() => {
           if (history.length > 1) history.back();
           else window.location.href = `${base}/`;
         }}
-        class="btn-icon text-gray-500 dark:text-gray-400"
+        class="btn-icon text-gray-500 dark:text-gray-400 -ml-2"
         aria-label="Voltar para lista"
       >
         <span class="mi">arrow_back</span>
       </button>
-      <div class="flex items-center gap-1">
-        <!-- Favorite -->
+    </div>
+
+    <!--
+      Topo do hino como no mockup (docs/ux/telas-propostas.pdf, p.12): título com uma linha de
+      metadados embaixo e, à direita, três ações com peso visual — favoritar, compartilhar e Palco,
+      esta com rótulo. Antes eram seis ícones sem rótulo soltos numa barra acima do título, sem
+      relação visível com ele; copiar, lista e links externos desceram para o ⋮, onde o uso é raro.
+    -->
+    <div class="flex items-start justify-between gap-4 mb-5" bind:this={titleEl}>
+      <div class="flex items-start gap-3 min-w-0">
+        <span class="shrink-0 w-10 h-10 mt-0.5 rounded-xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-base font-bold">
+          {song.number}
+        </span>
+        <div class="min-w-0">
+          <h1 class="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 leading-tight">{song.title}</h1>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {verses.length} {verses.length === 1 ? 'estrofe' : 'estrofes'}{temRefrao ? ' · refrão' : ''}{temPartituraPropria ? ` · ${qtdVersoes} ${qtdVersoes === 1 ? 'partitura' : 'partituras'}` : ''}{externalLinks.chord ? ' · cifra' : ''}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1 sm:gap-2 shrink-0">
         <button
           onclick={() => { favorites.toggle(song.number); haptic(!isFavorite ? 15 : 8); track('favorite_toggled', { number: song.number, favorited: !isFavorite }); }}
-          class="btn-icon {isFavorite ? 'text-red-500' : ''}"
+          class="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 {isFavorite ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}"
           aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         >
           <span class="mi mi-sm {isFavorite ? 'mi-filled' : ''}">favorite</span>
         </button>
 
-        <!-- Copy -->
         <div class="relative hidden sm:block">
-          <button onclick={handleCopy} class="btn-icon" aria-label="Copiar letra">
-            <span class="mi mi-sm">content_copy</span>
+          <button onclick={handleShare} class="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400" aria-label="Compartilhar hino">
+            <span class="mi mi-sm">share</span>
           </button>
-          {#if copyTooltip}
-            <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 px-2 py-1 rounded">
-              {copyTooltip}
-            </span>
+          {#if shareTooltip}
+            <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 px-2 py-1 rounded">{shareTooltip}</span>
           {/if}
         </div>
 
-        <!-- Playlist -->
+        <a
+          href="{base}/song/{song.id}/present"
+          onclick={() => track('presentation_opened_nav', { number: song.number })}
+          class="hidden sm:inline-flex items-center gap-2 h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-800 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          <span class="mi mi-sm">present_to_all</span> Palco
+        </a>
+
         <div class="relative hidden sm:block">
-          <button onclick={() => showPlaylistMenu = !showPlaylistMenu} class="btn-icon" aria-label="Adicionar à lista">
-            <span class="mi mi-sm">playlist_add</span>
+          <button onclick={() => showMoreMenu = !showMoreMenu} class="w-11 h-11 flex items-center justify-center rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Mais opções">
+            <span class="mi mi-sm">more_vert</span>
           </button>
-          {#if showPlaylistMenu}
+          {#if showMoreMenu}
             <div class="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-20 py-1">
-              <div class="px-3 py-1 text-xs text-gray-400 uppercase tracking-wider">Adicionar a</div>
+              <button onclick={() => { showMoreMenu = false; handleCopy(); }} class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
+                <span class="mi mi-sm text-gray-500">content_copy</span> Copiar letra
+              </button>
+              <div class="px-3 pt-2 pb-1 text-xs text-gray-400 uppercase tracking-wider">Adicionar à lista</div>
               {#each $playlists as pl (pl.id)}
                 <button
-                  onclick={() => addToPlaylist(pl.id)}
+                  onclick={() => { addToPlaylist(pl.id); showMoreMenu = false; }}
                   disabled={pl.numbers.includes(song.number)}
-                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between"
+                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 flex items-center justify-between gap-2"
                 >
                   <span class="truncate">{pl.name}</span>
                   {#if pl.numbers.includes(song.number)}<span class="text-xs text-gray-400">✓</span>{/if}
                 </button>
               {/each}
-              <button
-                onclick={createAndAdd}
-                class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 border-t border-gray-100 dark:border-gray-800 text-brand-600 dark:text-brand-400"
-              >+ Nova lista</button>
-            </div>
-          {/if}
-        </div>
-
-        <!-- Apresentação (desktop) -->
-        <a
-          href="{base}/song/{song.id}/present"
-          onclick={() => track('presentation_opened_nav', { number: song.number })}
-          class="btn-icon hidden sm:inline-flex"
-          aria-label="Modo apresentação"
-        >
-          <span class="mi mi-sm">present_to_all</span>
-        </a>
-
-        <!-- Share -->
-        <div class="relative hidden sm:block">
-          <button onclick={handleShare} class="btn-icon" aria-label="Compartilhar hino">
-            <span class="mi mi-sm">share</span>
-          </button>
-          {#if shareTooltip}
-            <span class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 px-2 py-1 rounded">
-              {shareTooltip}
-            </span>
-          {/if}
-        </div>
-
-        <!-- More menu: no celular tem tudo; no desktop, só o que não tem ícone na barra (links externos) -->
-        <div class="relative hidden {temExternos ? 'sm:block' : ''}">
-          <button onclick={() => showMoreMenu = !showMoreMenu} class="btn-icon" aria-label="Mais opções">
-            <span class="mi mi-sm">more_vert</span>
-          </button>
-          {#if showMoreMenu}
-            <div class="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-20 py-1">
+              <button onclick={() => { showMoreMenu = false; createAndAdd(); }} class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-brand-600 dark:text-brand-400 flex items-center gap-2">
+                <span class="mi mi-sm">playlist_add</span> Nova lista
+              </button>
               {#if temExternos}
-                <div class="px-3 py-1 text-xs text-gray-400 uppercase tracking-wider">Em outros sites</div>
+                <div class="px-3 pt-2 pb-1 text-xs text-gray-400 uppercase tracking-wider border-t border-gray-100 dark:border-gray-800 mt-1">Em outros sites</div>
                 {#if externalLinks.chord}
                   <a href={externalLinks.chord} target="_blank" rel="noreferrer"
                     onclick={() => { showMoreMenu = false; track('external_chord_opened', { number: song.number }); }}
@@ -519,18 +515,6 @@
             </div>
           {/if}
         </div>
-      </div>
-    </div>
-
-    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-10">
-    <div class="min-w-0">
-    <!-- Song header -->
-    <div class="mb-4 flex items-start gap-3" bind:this={titleEl}>
-      <div class="flex items-center gap-2 flex-1 min-w-0">
-        <span class="shrink-0 w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-base font-bold">
-          {song.number}
-        </span>
-        <h1 class="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">{song.title}</h1>
       </div>
     </div>
 
@@ -728,10 +712,6 @@
           </div>
         </div>
 
-        <a href="{base}/song/{song.id}/present" onclick={() => track('presentation_opened_nav', { number: song.number, from: 'panel' })}
-          class="flex items-center justify-center gap-1.5 w-full min-h-[44px] rounded-lg bg-gray-100 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700">
-          <span class="mi mi-sm">present_to_all</span> Modo palco
-        </a>
       </div>
     </aside>
     </div>
