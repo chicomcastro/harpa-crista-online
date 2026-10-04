@@ -109,11 +109,34 @@
 </script>
 
 {#if versoes.length}
-  <section bind:this={secao} class="{classe} rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-4" aria-label="Partitura por instrumento">
-    <div class="flex items-center justify-between gap-2 mb-3">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
-        <span class="mi mi-sm text-brand-600 dark:text-brand-400">library_music</span> Partitura por instrumento
-      </h2>
+  <!--
+    Sem card: a pauta e o vídeo ficam direto no fundo, como a letra. A borda e o padding só
+    empilhavam uma moldura em volta do que já é o conteúdo da aba.
+  -->
+  <section bind:this={secao} class={classe} aria-label="Partitura por instrumento">
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <label class="sr-only" for="versao-{number}">Instrumento</label>
+        <!-- appearance-none + seta própria: a nativa ficava espremida na borda do campo. -->
+        <select
+          id="versao-{number}"
+          value={atual.instrumento}
+          onchange={(e) => escolher(versoes.find(v => v.instrumento === e.currentTarget.value))}
+          class="appearance-none min-w-0 max-w-full h-10 pl-3 pr-9 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 bg-no-repeat"
+          style="background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;); background-position: right 0.6rem center; background-size: 1rem;"
+        >
+          {#each grupos as g (g.rotulo)}
+            <optgroup label={g.rotulo}>
+              {#each g.itens as v (v.instrumento)}
+                <option value={v.instrumento}>{v.rotulo}</option>
+              {/each}
+            </optgroup>
+          {/each}
+        </select>
+        <span class="text-xs text-gray-500 dark:text-gray-400 leading-tight hidden sm:block">
+          {atual.tipo === 'arranjo' ? 'Arranjo' : 'Melodia'} · {versoes.indexOf(atual) + 1} de {versoes.length}
+        </span>
+      </div>
       <a
         href="{partituras.canal}?sub_confirmation=1"
         target="_blank"
@@ -123,76 +146,57 @@
       >Canal no YouTube ↗</a>
     </div>
 
-    <div class="flex items-center justify-between gap-3 mb-3">
-      <label class="sr-only" for="versao-{number}">Instrumento</label>
-      <select
-        id="versao-{number}"
-        value={atual.instrumento}
-        onchange={(e) => escolher(versoes.find(v => v.instrumento === e.currentTarget.value))}
-        class="min-w-0 max-w-full px-3 py-2 pr-8 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100"
-      >
-        {#each grupos as g (g.rotulo)}
-          <optgroup label={g.rotulo}>
-            {#each g.itens as v (v.instrumento)}
-              <option value={v.instrumento}>{v.rotulo}</option>
-            {/each}
-          </optgroup>
-        {/each}
-      </select>
-      <div class="text-right text-xs text-gray-500 dark:text-gray-400 shrink-0 leading-tight">
-        <div>{atual.tipo === 'arranjo' ? 'Arranjo' : 'Melodia'}</div>
-        <div>{versoes.indexOf(atual) + 1} de {versoes.length} {versoes.length === 1 ? 'versão' : 'versões'}</div>
-      </div>
-    </div>
-
-    {#if urlVisor && mostrar !== 'video'}
-      <!-- A pauta é o conteúdo principal da aba; o vídeo tem aba própria. -->
-      <div class="relative w-full rounded-lg overflow-hidden bg-[#f7f5ef] mb-3" style="aspect-ratio: 1 / 1.1;">
-        <iframe
-          src={urlVisor}
-          title="Partitura de {partituras.hinos[String(number)]?.nome || `hino ${number}`} para {atual.rotulo}"
-          loading="lazy"
-          class="absolute inset-0 w-full h-full"
-        ></iframe>
-      </div>
-      <button
-        onclick={abrirTelaCheia}
-        class="w-full mb-3 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white"
-      >
-        <span class="mi mi-sm">fullscreen</span> Abrir na tela
-      </button>
-    {/if}
-
-    {#if atual.video && mostrar !== 'partitura'}
-      <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black mb-3">
-        <!-- Continua atrás de um toque mesmo na aba Vídeo: o embed pesa ~1 MB, e trocar de aba não
-             deveria soltar som sozinho. -->
-        {#if tocando}
+    <!-- No desktop a pauta e o vídeo dividem a largura, em vez do vídeo empilhado embaixo. -->
+    <div class="{urlVisor && atual.video && mostrar === 'tudo' ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6 lg:items-start' : ''}">
+      {#if urlVisor && mostrar !== 'video'}
+        <div class="relative w-full rounded-lg overflow-hidden bg-[#f7f5ef] mb-3" style="aspect-ratio: 1 / 1.1;">
           <iframe
-            src="https://www.youtube-nocookie.com/embed/{atual.video}?autoplay=1&rel=0"
-            title="{atual.rotulo} — partitura em vídeo"
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowfullscreen
+            src={urlVisor}
+            title="Partitura de {partituras.hinos[String(number)]?.nome || `hino ${number}`} para {atual.rotulo}"
+            loading="lazy"
             class="absolute inset-0 w-full h-full"
           ></iframe>
-        {:else}
-          <!-- Capa no lugar do player: o iframe do YouTube pesa ~1 MB e só carrega se a pessoa quiser ver. -->
-          <button onclick={tocar} class="absolute inset-0 w-full h-full group" aria-label="Ouvir com o vídeo da partitura para {atual.rotulo}">
-            <img
-              src="https://i.ytimg.com/vi/{atual.video}/hqdefault.jpg"
-              alt=""
-              loading="lazy"
-              class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-            />
-            <span class="absolute inset-0 flex items-center justify-center">
-              <span class="w-16 h-16 rounded-full bg-black/70 group-hover:bg-red-600 transition-colors flex items-center justify-center">
-                <span class="mi text-white" style="font-size: 40px;">play_arrow</span>
-              </span>
-            </span>
+          <!-- Em cima e à direita: embaixo a barra do próprio Drive cobria o botão. -->
+          <button
+            onclick={abrirTelaCheia}
+            class="absolute top-2 right-2 inline-flex items-center gap-1.5 h-10 px-3 rounded-lg bg-gray-900/85 hover:bg-gray-900 text-white text-sm font-medium backdrop-blur-sm"
+          >
+            <span class="mi mi-sm">fullscreen</span> Abrir na tela
           </button>
-        {/if}
-      </div>
-    {/if}
+        </div>
+      {/if}
+
+      {#if atual.video && mostrar !== 'partitura' && !telaCheia}
+        <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black mb-3">
+          <!-- Atrás de um toque: o embed pesa ~1 MB, e trocar de aba não deveria soltar som sozinho.
+               `!telaCheia` acima evita dois players ao mesmo tempo — era o motivo de pausar no visor
+               e o áudio continuar tocando por baixo. -->
+          {#if tocando}
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/{atual.video}?autoplay=1&rel=0"
+              title="{atual.rotulo} — partitura em vídeo"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowfullscreen
+              class="absolute inset-0 w-full h-full"
+            ></iframe>
+          {:else}
+            <button onclick={tocar} class="absolute inset-0 w-full h-full group" aria-label="Ouvir com o vídeo da partitura para {atual.rotulo}">
+              <img
+                src="https://i.ytimg.com/vi/{atual.video}/hqdefault.jpg"
+                alt=""
+                loading="lazy"
+                class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+              />
+              <span class="absolute inset-0 flex items-center justify-center">
+                <span class="w-16 h-16 rounded-full bg-black/70 group-hover:bg-red-600 transition-colors flex items-center justify-center">
+                  <span class="mi text-white" style="font-size: 40px;">play_arrow</span>
+                </span>
+              </span>
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
 
     <div class="flex flex-wrap gap-2">
       {#if atual.pdf_url}
@@ -201,7 +205,7 @@
           target="_blank"
           rel="noreferrer"
           onclick={() => track('partitura_pdf_opened', { number, instrument: atual.instrumento })}
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-gray-900 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-gray-800"
+          class="inline-flex items-center gap-1.5 h-10 px-3 text-sm rounded-lg border bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-gray-900 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-gray-800"
         >
           <span class="mi mi-sm">download</span> Baixar PDF
         </a>
@@ -212,7 +216,7 @@
           target="_blank"
           rel="noreferrer"
           onclick={() => track('partitura_youtube_opened', { number, instrument: atual.instrumento, video_id: atual.video })}
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          class="inline-flex items-center gap-1.5 h-10 px-3 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           Ver no canal ↗
         </a>
@@ -233,23 +237,25 @@
         </div>
       </div>
 
-      <!-- min-h-0 é o que deixa a pauta encolher quando o vídeo abre; sem isso o flex-1 ignora o
-           espaço que o vídeo ocupa. -->
       <iframe src={urlVisor} title="Partitura para {atual.rotulo}" class="flex-1 min-h-0 w-full bg-[#f7f5ef]"></iframe>
 
       {#if tocando && atual.video}
         <!--
-          O vídeo é limitado por ALTURA, não por largura. Com w-full + aspect-video ele virava
-          745px num desktop de 1324px e empurrava o dock (com o "Fechar vídeo") para fora da tela:
-          depois de abrir, não dava mais para fechar.
+          No desktop o vídeo flutua à direita, como o player do Cifra Club: a pauta continua com a
+          largura inteira e nunca é re-renderizada ao abrir ou fechar o vídeo — reposicionar o
+          iframe do Drive faz ele recarregar e piscar em branco.
+
+          No celular ele vai para o fluxo, limitado por ALTURA (38vh): com largura cheia +
+          aspect-video ele empurrava o dock, com o "Fechar vídeo", para fora da tela.
         -->
-        <div class="relative shrink-0 mx-auto h-[38vh] max-w-full aspect-video">
+        <div class="relative shrink-0 mx-auto max-w-full h-[38vh] aspect-video
+                    lg:absolute lg:right-4 lg:bottom-20 lg:h-auto lg:w-[38vw] lg:max-w-[640px] lg:shadow-2xl lg:rounded-xl lg:overflow-hidden">
           <iframe
             src="https://www.youtube-nocookie.com/embed/{atual.video}?autoplay=1&rel=0"
             title="{atual.rotulo} — partitura em vídeo"
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowfullscreen
-            class="absolute inset-0 w-full h-full"
+            class="absolute inset-0 w-full h-full lg:static lg:w-full lg:aspect-video lg:h-auto"
           ></iframe>
           <button
             onclick={() => tocando = false}
