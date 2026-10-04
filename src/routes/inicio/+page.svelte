@@ -13,9 +13,9 @@
 
 <svelte:head>
   <title>Harpa Cristã Online — 640 hinos grátis no seu celular</title>
-  <meta name="description" content="Todos os 640 hinos da Harpa Cristã no seu celular. Com áudio, letra grande pra projetar e busca pra achar qualquer hino em segundos. Grátis e sem anúncios." />
+  <meta name="description" content="Todos os 640 hinos da Harpa Cristã no seu celular. Com partitura por instrumento, letra grande pra projetar e busca pra achar qualquer hino em segundos. Grátis e sem anúncios." />
   <meta property="og:title" content="Harpa Cristã Online — 640 hinos" />
-  <meta property="og:description" content="Todos os 640 hinos no seu celular. Com áudio, busca e letra grande pra projetar. Grátis e sem anúncios." />
+  <meta property="og:description" content="Todos os 640 hinos no seu celular. Com partitura por instrumento, busca e letra grande pra projetar. Grátis e sem anúncios." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://chicomcastro.github.io/harpa-crista-online/inicio" />
   <link rel="canonical" href="https://chicomcastro.github.io/harpa-crista-online/inicio" />
@@ -36,7 +36,7 @@
         <span class="bg-gradient-to-r from-brand-600 to-purple-600 dark:from-brand-400 dark:to-purple-400 bg-clip-text text-transparent">sempre com você</span>
       </h1>
       <p class="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
-        Todos os 640 hinos no seu celular. Com áudio pra ouvir, letra grande pra projetar e busca pra achar qualquer hino em segundos.
+        Todos os 640 hinos no seu celular. Com partitura por instrumento, letra grande pra projetar e busca pra achar qualquer hino em segundos.
       </p>
       <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
         <a href="{base}/" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold transition-all shadow-lg shadow-brand-600/20 hover:shadow-brand-600/40 hover:-translate-y-0.5">
@@ -84,8 +84,8 @@
           { icon: 'cloud_off', title: 'Funciona sem internet', body: 'Depois que você abre pela primeira vez, ele continua funcionando mesmo sem sinal. Igreja no interior? Sem problema.' },
           { icon: 'queue_music', title: 'Monte a ordem do culto', body: 'Organize os hinos da semana e envie o link pra equipe. Não precisa criar conta.' },
           { icon: 'present_to_all', title: 'Projete no telão', body: 'Letra gigante, fundo escuro, um verso de cada vez. O coro já aparece sozinho.' },
+          { icon: 'library_music', title: 'Partitura por instrumento', body: 'Violino, trompete, trombone, violoncelo e arranjos de quarteto — para ler na tela ou baixar em PDF.' },
           { icon: 'favorite', title: 'Seus hinos favoritos', body: 'Marque os que você mais canta. Ficam salvos no seu celular.' },
-          { icon: 'headphones', title: 'Ouça o hino', body: 'Cada hino tem o áudio pra você acompanhar a melodia.' },
           { icon: 'image', title: 'Compartilhe como imagem', body: 'Transforme qualquer verso numa imagem bonita pra enviar no WhatsApp ou postar nos Stories.' },
           { icon: 'dark_mode', title: 'Modo escuro', body: 'Mais confortável pra ler à noite ou em ambientes sem muita luz.' },
           { icon: 'lock_open', title: 'Sem pegadinhas', body: 'Sem assinatura, sem anúncio, sem cadastro. E continua assim pra sempre.' }

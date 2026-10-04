@@ -2,7 +2,9 @@
 import { build, files, prerendered, version } from '$service-worker';
 
 const CACHE = `harpa-crista-${version}`;
-const AUDIO_CACHE = 'harpa-crista-audio-v1';
+// O áudio foi aposentado (#18): o bucket harpa.nyc3.digitaloceanspaces.com não existe mais. O
+// activate abaixo deixou de poupar o cache 'harpa-crista-audio-v1', então o que sobrou no aparelho
+// de quem chegou a baixar é apagado na próxima visita.
 
 const PRECACHE = [...build, ...files, ...prerendered];
 
@@ -26,7 +28,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(
-      keys.filter(k => k !== CACHE && k !== AUDIO_CACHE).map(k => caches.delete(k))
+      keys.filter(k => k !== CACHE).map(k => caches.delete(k))
     );
     await self.clients.claim();
   })());
@@ -35,17 +37,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-
-  // Audio: serve from audio cache only (no auto-cache)
-  if (url.hostname.includes('digitaloceanspaces.com')) {
-    event.respondWith((async () => {
-      const cached = await caches.match(event.request);
-      if (cached) return cached;
-      try { return await fetch(event.request); }
-      catch { return new Response('', { status: 504 }); }
-    })());
-    return;
-  }
 
   // Amplitude: bypass entirely
   if (url.hostname.includes('amplitude')) return;
@@ -95,41 +86,3 @@ self.addEventListener('fetch', (event) => {
   })());
 });
 
-// Audio download coordination from the client
-self.addEventListener('message', async (event) => {
-  const msg = event.data || {};
-  const reply = (data) => event.source?.postMessage(data);
-
-  if (msg.type === 'download-audio') {
-    const cache = await caches.open(AUDIO_CACHE);
-    const urls = msg.urls || [];
-    let done = 0;
-    for (const u of urls) {
-      try {
-        const existing = await cache.match(u);
-        if (!existing) {
-          const res = await fetch(u);
-          if (res.ok) await cache.put(u, res);
-        }
-      } catch {}
-      done++;
-      reply({ type: 'download-progress', done, total: urls.length });
-    }
-    reply({ type: 'download-done', total: urls.length });
-  }
-
-  if (msg.type === 'clear-audio-cache') {
-    await caches.delete(AUDIO_CACHE);
-    reply({ type: 'audio-cache-cleared' });
-  }
-
-  if (msg.type === 'audio-cache-status') {
-    try {
-      const cache = await caches.open(AUDIO_CACHE);
-      const keys = await cache.keys();
-      reply({ type: 'audio-cache-status', count: keys.length });
-    } catch {
-      reply({ type: 'audio-cache-status', count: 0 });
-    }
-  }
-});
