@@ -416,8 +416,6 @@
   </div>
 
   <div class="container mx-auto px-4 pt-3 pb-24 sm:pb-3 max-w-2xl lg:max-w-5xl">
-    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-10">
-    <div class="min-w-0">
     <div class="mb-3">
       <button
         onclick={() => {
@@ -568,6 +566,15 @@
         <Partituras number={song.number} mostrar={aba === 'video' ? 'video' : 'partitura'} class="mb-6" />
       </div>
     {/if}
+
+    <!--
+      A grade de duas colunas só existe na aba Letra: o painel de ferramentas é dela, e quando as
+      outras abas o escondiam a coluna de 260px continuava reservada, deixando um vazio à direita
+      da pauta e do vídeo. Topo e abas ficam fora da grade, na largura toda, para as ações do
+      título encostarem na borda direita.
+    -->
+    <div class={aba === 'letra' ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-10' : ''}>
+    <div class="min-w-0">
 
     <div class={aba === 'letra' ? '' : 'hidden'}>
     <!-- Verses -->
