@@ -43,6 +43,11 @@ function adminLinkSaver() {
 export default defineConfig({
     plugins: [sveltekit(), adminLinkSaver()],
 
+    // Sem a condição `browser`, o vitest importa o build de servidor do Svelte e render() morre
+    // com "mount is not available on the server". Só sob teste: no build normal quem decide isso
+    // é o SvelteKit, que precisa do caminho de servidor para pré-renderizar.
+    resolve: process.env.VITEST ? { conditions: ['browser'] } : {},
+
     server: {
         fs: {
             allow: ['data']
@@ -53,6 +58,15 @@ export default defineConfig({
     },
 
     test: {
-        include: ['src/**/*.{test,spec}.{js,ts}']
+        include: ['src/**/*.{test,spec}.{js,ts}'],
+        // jsdom para todos: as lógicas puras não se incomodam, e stores e componentes precisam de
+        // DOM e localStorage. Separar em dois ambientes custaria um workspace inteiro por nada.
+        environment: 'jsdom',
+        setupFiles: ['src/testes/setup.js'],
+        coverage: {
+            provider: 'v8',
+            include: ['src/lib/**/*.js', 'src/routes/**/*.js'],
+            exclude: ['src/lib/songs.json', 'src/**/*.test.js']
+        }
     }
 });
