@@ -229,16 +229,30 @@
         </div>
       </div>
 
-      <iframe src={urlVisor} title="Partitura para {atual.rotulo}" class="flex-1 w-full bg-[#f7f5ef]"></iframe>
+      <!-- min-h-0 é o que deixa a pauta encolher quando o vídeo abre; sem isso o flex-1 ignora o
+           espaço que o vídeo ocupa. -->
+      <iframe src={urlVisor} title="Partitura para {atual.rotulo}" class="flex-1 min-h-0 w-full bg-[#f7f5ef]"></iframe>
 
       {#if tocando && atual.video}
-        <iframe
-          src="https://www.youtube-nocookie.com/embed/{atual.video}?autoplay=1&rel=0"
-          title="{atual.rotulo} — partitura em vídeo"
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowfullscreen
-          class="w-full aspect-video shrink-0"
-        ></iframe>
+        <!--
+          O vídeo é limitado por ALTURA, não por largura. Com w-full + aspect-video ele virava
+          745px num desktop de 1324px e empurrava o dock (com o "Fechar vídeo") para fora da tela:
+          depois de abrir, não dava mais para fechar.
+        -->
+        <div class="relative shrink-0 mx-auto h-[38vh] max-w-full aspect-video">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/{atual.video}?autoplay=1&rel=0"
+            title="{atual.rotulo} — partitura em vídeo"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowfullscreen
+            class="absolute inset-0 w-full h-full"
+          ></iframe>
+          <button
+            onclick={() => tocando = false}
+            class="absolute top-2 right-2 w-11 h-11 flex items-center justify-center rounded-full bg-black/70 hover:bg-black/90 text-white"
+            aria-label="Fechar vídeo"
+          ><span class="mi mi-sm">close</span></button>
+        </div>
       {/if}
 
       <div class="flex items-stretch gap-2 px-3 py-2 shrink-0 safe-bottom bg-gray-900 text-white overflow-x-auto">
