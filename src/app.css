@@ -30,6 +30,15 @@
     outline-offset: 2px;
   }
 
+  /*
+   * O popup do <select> não herda a fonte do campo: ele usa a do sistema, e com html a 18px a
+   * lista saía visivelmente menor que o rótulo selecionado. Chrome e Safari respeitam font-size em
+   * option/optgroup, então é aqui que se acerta — não dá para estilizar o popup de outro jeito.
+   */
+  select, option, optgroup {
+    font-size: 1rem;
+  }
+
   /* iOS safe-area support */
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
