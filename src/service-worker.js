@@ -6,7 +6,8 @@ const AUDIO_CACHE = 'harpa-crista-audio-v1';
 
 const PRECACHE = [...build, ...files, ...prerendered];
 
-const MATERIAL_SYMBOLS_URL = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_back,arrow_downward,arrow_forward,arrow_upward,check,chevron_left,chevron_right,close,cloud_off,content_copy,dark_mode,delete,download,edit,favorite,fullscreen,fullscreen_exit,image,ios_share,library_music,light_mode,more_vert,music_note,photo_camera,playlist_add,present_to_all,queue_music,remove,search,share';
+// Tem que ser idêntica à do src/app.html, senão o cache não casa e os ícones somem offline.
+const MATERIAL_SYMBOLS_URL = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,arrow_back,arrow_downward,arrow_forward,arrow_upward,bolt,check,check_circle,chevron_left,chevron_right,close,cloud_off,content_copy,dark_mode,delete,download,edit,favorite,fullscreen,fullscreen_exit,headphones,image,install_mobile,ios_share,library_music,light_mode,lock_open,more_vert,music_note,phone_android,phone_iphone,photo_camera,play_arrow,playlist_add,present_to_all,queue_music,remove,search,share';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

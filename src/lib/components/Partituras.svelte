@@ -6,18 +6,19 @@
   import partituras from '../../../data/partituras.json';
   import { track } from '$lib/analytics.js';
 
-  let { number } = $props();
+  // `instrumento` fixa a versão inicial (páginas /h/<nº>/<instrumento>); sem ele, vale o último escolhido.
+  let { number, instrumento = null } = $props();
 
   const CHAVE = 'hc_instrumento';
   const hoje = new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
 
   const versoes = $derived(
-    (partituras.hinos[String(number)] || [])
+    (partituras.hinos[String(number)]?.versoes || [])
       .map(v => ({ ...v, video: v.youtube_id && (!v.publicado_em || v.publicado_em <= hoje) ? v.youtube_id : null }))
       .filter(v => v.video || v.pdf_url)
   );
 
-  let escolhido = $state(null);
+  let escolhido = $state(instrumento);
   let tocando = $state(false);
 
   function preferido() {
@@ -28,7 +29,8 @@
   $effect(() => {
     if (!versoes.length) return;
     const pref = preferido();
-    escolhido = versoes.find(v => v.instrumento === pref)?.instrumento || versoes[0].instrumento;
+    const inicial = instrumento || pref;
+    escolhido = versoes.find(v => v.instrumento === inicial)?.instrumento || versoes[0].instrumento;
     tocando = false;
     track('partituras_shown', { number, versions: versoes.length, preferred: pref });
   });

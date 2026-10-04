@@ -124,7 +124,7 @@
   const isFavorite = $derived(song ? $favorites.includes(song.number) : false);
   const externalLinks = $derived(song ? (curatedLinks[song.number] || {}) : {});
   // Com partitura própria (canal Harpa Cristã Partituras), o botão leva ao bloco da página em vez do site externo.
-  const temPartituraPropria = $derived(song ? !!partituras.hinos[String(song.number)]?.length : false);
+  const temPartituraPropria = $derived(song ? !!partituras.hinos[String(song.number)]?.versoes?.length : false);
 
   async function handleShare() {
     if (!song) return;

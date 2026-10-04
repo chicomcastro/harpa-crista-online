@@ -1,4 +1,5 @@
 import songs from '$lib/songs.json';
+import partituras from '../../../data/partituras.json';
 
 export const prerender = true;
 
@@ -15,7 +16,12 @@ export function GET() {
       loc: `${SITE}${BASE}/song/${s.id}`,
       priority: 0.8,
       changefreq: 'yearly'
-    }))
+    })),
+    ...Object.entries(partituras.hinos).flatMap(([number, h]) => h.versoes.map(v => ({
+      loc: `${SITE}${BASE}/h/${number}/${v.instrumento}`,
+      priority: 0.7,
+      changefreq: 'monthly'
+    })))
   ];
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

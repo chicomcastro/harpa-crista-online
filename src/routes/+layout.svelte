@@ -16,6 +16,11 @@
   const isHinos = $derived((path === base + '/' || path === base || path === '/') && favsParam !== '1');
   const isListas = $derived(path.includes('/playlists'));
   const isFavoritos = $derived(favsParam === '1');
+  // Rotas que escrevem description/og:* próprios. Nas outras entra o padrão abaixo; deixar o padrão no
+  // app.html duplicava as tags e o Google podia pegar a genérica.
+  const SEO_PROPRIO = new Set(['/sobre', '/inicio', '/song/[id]', '/h/[number]', '/h/[number]/[instrumento]']);
+  const IMAGEM_PROPRIA = new Set(['/h/[number]/[instrumento]']);
+  const seoProprio = $derived(SEO_PROPRIO.has($page.route.id));
 
   let jumpNumber = $state('');
   let showToTop = $state(false);
@@ -67,6 +72,15 @@
 
 <svelte:head>
   <title>Harpa Cristã Online</title>
+  {#if !seoProprio}
+    <meta name="description" content="Harpa Cristã Online — Todos os 640 hinos com busca, favoritos, modo apresentação, listas de culto e funcionamento offline. Grátis." />
+    <meta property="og:title" content="Harpa Cristã Online — 640 hinos" />
+    <meta property="og:description" content="Todos os 640 hinos da Harpa Cristã com busca, favoritos, modo apresentação e offline. Grátis, sem anúncios." />
+    <meta property="og:type" content="website" />
+  {/if}
+  {#if !IMAGEM_PROPRIA.has($page.route.id)}
+    <meta property="og:image" content="https://chicomcastro.github.io/harpa-crista-online/og-image.png" />
+  {/if}
 </svelte:head>
 
 <div class="min-h-screen flex flex-col">
