@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
   import { base } from '$app/paths';
-  import { songs, favorites, fontSize, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
+  import { songs, favorites, fontSize, colunasLetra, recentlyViewed, notes, playlists, darkMode } from '$lib/stores.js';
   import { parseVerses, shareSong, haptic, caixaNormal, passoRolagem } from '$lib/utils.js';
   import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import curatedLinks from '../../../../data/links.json';
@@ -580,7 +580,10 @@
     <!-- Verses -->
     <!-- max-w-2xl na própria letra: a coluna cresce até 5xl no desktop, e o botão de compartilhar,
          ancorado na direita do verso, ficava solto a meia tela do texto. -->
-    <div class="song-content font-serif max-w-2xl" style="font-size: {$fontSize}px; line-height: 1.7;">
+    <div
+      class="song-content font-serif {$colunasLetra === 2 ? 'lg:max-w-none lg:[column-count:2] lg:[column-gap:2.5rem]' : 'max-w-2xl'}"
+      style="font-size: {$fontSize}px; line-height: 1.7;"
+    >
       {#each verses as verse, i}
         <div
           id="verse-{i}"
@@ -588,7 +591,7 @@
           tabindex="0"
           onclick={() => revealedVerse = revealedVerse === i ? -1 : i}
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); revealedVerse = revealedVerse === i ? -1 : i; } }}
-          class="group relative mb-6 transition-colors rounded-md px-2 -mx-2 cursor-pointer {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700' : ''}"
+          class="group relative mb-6 break-inside-avoid transition-colors rounded-md px-2 -mx-2 cursor-pointer {verse.isChorus ? 'pl-6 border-l-2 border-brand-300 dark:border-brand-700' : ''}"
         >
           {#if verse.isChorus}
             <div class="text-[11px] uppercase tracking-widest text-brand-600 dark:text-brand-400 font-semibold font-sans mb-1">Refrão</div>
@@ -710,6 +713,20 @@
               <span class="mi mi-sm">{rolando ? 'pause' : 'play_arrow'}</span>
             </button>
             <button onclick={() => velocidade = Math.min(5, velocidade + 1)} disabled={velocidade >= 5} class="btn-icon disabled:opacity-30" aria-label="Rolar mais rápido"><span class="mi mi-sm">add</span></button>
+          </div>
+        </div>
+
+        <!-- Duas colunas só a partir de lg: abaixo disso a coluna fica estreita demais e o verso quebra. -->
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Colunas</span>
+          <div class="flex items-center gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800" role="group" aria-label="Colunas da letra">
+            {#each [1, 2] as n}
+              <button
+                onclick={() => { colunasLetra.set(n); track('lyrics_columns_changed', { number: song.number, columns: n }); }}
+                aria-pressed={$colunasLetra === n}
+                class="w-9 h-8 flex items-center justify-center rounded-md text-sm font-medium {$colunasLetra === n ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}"
+              >{n}</button>
+            {/each}
           </div>
         </div>
 
