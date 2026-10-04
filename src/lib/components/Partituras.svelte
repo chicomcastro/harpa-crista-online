@@ -265,22 +265,24 @@
         </div>
       {/if}
 
-      <div class="flex items-stretch gap-2 px-3 py-2 shrink-0 safe-bottom bg-gray-900 text-white overflow-x-auto">
+      <!-- Sem overflow-x: com os rótulos curtos no celular os três cabem, e um dock que rola
+           esconde ação — foi o que cortou o "Ver no canal" em 375px. -->
+      <div class="flex items-stretch justify-center gap-2 px-3 py-2 shrink-0 safe-bottom bg-gray-900 text-white">
         {#if atual.video}
           <button onclick={() => tocando ? tocando = false : tocar()} class="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-white/10 hover:bg-white/20 text-sm whitespace-nowrap">
-            <span class="mi mi-sm">{tocando ? 'close' : 'play_arrow'}</span>{tocando ? 'Fechar vídeo' : 'Ouvir com o vídeo'}
+            <span class="mi mi-sm">{tocando ? 'close' : 'play_arrow'}</span>{tocando ? 'Fechar' : 'Vídeo'}<span class="hidden sm:inline">{tocando ? ' vídeo' : ' com o vídeo'}</span>
           </button>
         {/if}
         <a href={atual.pdf_url} target="_blank" rel="noreferrer"
           onclick={() => track('partitura_pdf_opened', { number, instrument: atual.instrumento, from: 'fullscreen' })}
           class="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-white/10 hover:bg-white/20 text-sm whitespace-nowrap">
-          <span class="mi mi-sm">download</span> Baixar PDF
+          <span class="mi mi-sm">download</span><span class="hidden sm:inline">Baixar </span>PDF
         </a>
         {#if atual.video}
           <a href="https://www.youtube.com/watch?v={atual.video}" target="_blank" rel="noreferrer"
             onclick={() => track('partitura_youtube_opened', { number, instrument: atual.instrumento, from: 'fullscreen' })}
             class="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-white/10 hover:bg-white/20 text-sm whitespace-nowrap">
-            Ver no canal ↗
+            <span class="hidden sm:inline">Ver no </span>Canal ↗
           </a>
         {/if}
       </div>

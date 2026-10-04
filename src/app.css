@@ -16,6 +16,20 @@
     @apply bg-brand-200 dark:bg-brand-800;
   }
 
+  /*
+   * Foco visível com a cor da marca.
+   *
+   * Sem isto cada sistema desenha o seu: no macOS o anel sai na cor de destaque do usuário, e um
+   * <select> abria com uma borda laranja no meio de uma interface azul-escura. Trocar por uma cor
+   * nossa, e não remover — foco invisível quebra navegação por teclado.
+   *
+   * :focus-visible (e não :focus) para o anel não aparecer em clique de mouse.
+   */
+  :focus-visible {
+    outline: 2px solid theme('colors.brand.500');
+    outline-offset: 2px;
+  }
+
   /* iOS safe-area support */
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
