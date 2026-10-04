@@ -8,6 +8,7 @@
   import ImagePreviewModal from '$lib/components/ImagePreviewModal.svelte';
   import { audioCacheStatus, downloadAudios, clearAudioCache, refreshAudioCacheStatus } from '$lib/offline-audio.js';
   import { track } from '$lib/analytics.js';
+  import partituras from '../../data/partituras.json';
   import { onMount, tick } from 'svelte';
 
   // Preserve scroll position across back/forward navigation
@@ -18,6 +19,29 @@
 
   let searchQuery = $state(browser ? ($page.url.searchParams.get('q') || '') : '');
   let showFavoritesOnly = $state(browser ? $page.url.searchParams.get('favs') === '1' : false);
+
+  /*
+   * Selo e filtros de partitura (#7).
+   *
+   * "Esse hino tem partitura?" é a primeira pergunta do músico, e até agora só dava para responder
+   * abrindo o hino — 28 dos 640 têm, e não havia como achá-los. O dado já estava em
+   * data/partituras.json; faltava chegar na lista.
+   */
+  const porHino = Object.fromEntries(
+    Object.entries(partituras.hinos).map(([n, h]) => [
+      Number(n),
+      { versoes: h.versoes.length, arranjo: h.versoes.some(v => v.tipo === 'arranjo') }
+    ])
+  );
+  const totalComPartitura = Object.keys(porHino).length;
+
+  let filtroPartitura = $state(browser ? $page.url.searchParams.get('part') === '1' : false);
+  let filtroArranjo = $state(browser ? $page.url.searchParams.get('arranjo') === '1' : false);
+
+  $effect(() => {
+    filtroPartitura = $page.url.searchParams.get('part') === '1';
+    filtroArranjo = $page.url.searchParams.get('arranjo') === '1';
+  });
 
   // React to URL changes (bottom nav click while already on home)
   $effect(() => {
@@ -35,6 +59,8 @@
   let filteredResults = $derived.by(() => {
     let pool = songs;
     if (showFavoritesOnly) pool = pool.filter(s => $favorites.includes(s.number));
+    if (filtroPartitura) pool = pool.filter(s => porHino[s.number]);
+    if (filtroArranjo) pool = pool.filter(s => porHino[s.number]?.arranjo);
     return searchSongs(pool, searchQuery);
   });
 
@@ -48,6 +74,10 @@
     else url.searchParams.delete('q');
     if (showFavoritesOnly) url.searchParams.set('favs', '1');
     else url.searchParams.delete('favs');
+    if (filtroPartitura) url.searchParams.set('part', '1');
+    else url.searchParams.delete('part');
+    if (filtroArranjo) url.searchParams.set('arranjo', '1');
+    else url.searchParams.delete('arranjo');
     goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true });
   });
 
@@ -169,6 +199,18 @@
       <kbd class="hidden sm:inline-block text-xs text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 font-mono">/</kbd>
     </div>
   </div>
+  <div class="flex gap-2 pt-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+    <button
+      onclick={() => { filtroPartitura = !filtroPartitura; track('filter_toggled', { filter: 'partitura', on: filtroPartitura }); }}
+      aria-pressed={filtroPartitura}
+      class="shrink-0 min-h-[44px] px-4 text-sm rounded-xl border transition-colors {filtroPartitura ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300'}"
+    >Com partitura</button>
+    <button
+      onclick={() => { filtroArranjo = !filtroArranjo; track('filter_toggled', { filter: 'arranjo', on: filtroArranjo }); }}
+      aria-pressed={filtroArranjo}
+      class="shrink-0 min-h-[44px] px-4 text-sm rounded-xl border transition-colors {filtroArranjo ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300'}"
+    >Arranjo p/ grupo</button>
+  </div>
   </div>
 
   {#if !searchQuery && !showFavoritesOnly}
@@ -221,20 +263,9 @@
 
   <!-- Section heading -->
   {#if !searchQuery && !showFavoritesOnly}
-    <h2 class="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-3">Todos os hinos</h2>
-
-    <!-- Numerical scrubber (jump ranges) -->
-    <div class="flex gap-1 mb-4 overflow-x-auto -mx-1 px-1 pb-1">
-      {#each [1, 100, 200, 300, 400, 500, 600] as n}
-        <button
-          onclick={() => {
-            const el = document.getElementById(`song-${n}`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            track('scrubber_jump', { to: n });
-          }}
-          class="shrink-0 px-2.5 py-1 text-xs rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-brand-300 dark:hover:border-brand-700 hover:text-brand-600 dark:hover:text-brand-400"
-        >{n}</button>
-      {/each}
+    <div class="flex items-baseline justify-between gap-3 mb-3">
+      <h2 class="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold">Todos os hinos</h2>
+      <span class="text-xs text-gray-400 dark:text-gray-500">{songs.length} hinos · {totalComPartitura} com partitura</span>
     </div>
   {:else if showFavoritesOnly}
     <div class="flex items-center justify-between mb-3 gap-2">
@@ -286,48 +317,50 @@
     {/if}
   {/if}
 
-  <!-- Song grid -->
+  <!-- Lista: uma coluna, número alinhado, selo de partitura e coração em coluna própria (#7). -->
   {#if filteredResults.length > 0}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+    <ul class="divide-y divide-gray-200 dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800 -mx-4 sm:mx-0">
       {#each filteredResults as { song, snippet } (song.id)}
-        <a
-          href="{base}/song/{song.id}"
-          id="song-{song.number}"
-          class="group relative p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all"
-        >
-          <div class="flex items-start gap-3">
-            <span class="shrink-0 w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-sm font-bold">
+        <li id="song-{song.number}" class="relative">
+          <a
+            href="{base}/song/{song.id}"
+            class="flex items-center gap-3 pl-4 pr-14 sm:pl-3 py-3 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+          >
+            <span class="shrink-0 w-10 text-right tabular-nums text-sm font-semibold text-brand-600 dark:text-brand-400">
               {song.number}
             </span>
-            <div class="min-w-0 flex-1">
-              <h2 class="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm leading-tight">
+            <span class="min-w-0 flex-1">
+              <span class="block font-semibold text-gray-800 dark:text-gray-200 truncate text-[15px] leading-tight">
                 {#if searchQuery.trim().length >= 2}
                   {@html highlightMatch(song.title, searchQuery)}
                 {:else}
                   {song.title}
                 {/if}
-              </h2>
-              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-1">
+              </span>
+              <span class="block text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
                 {#if snippet}
                   {@html highlightMatch(snippet, searchQuery)}
                 {:else}
                   {getPreview(song.content)}
                 {/if}
-              </p>
-            </div>
-          </div>
-
-          <!-- Favorite button -->
+              </span>
+            </span>
+            {#if porHino[song.number]}
+              <span class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                Partitura <span class="font-mono opacity-70">·{porHino[song.number].versoes}</span>
+              </span>
+            {/if}
+          </a>
           <button
             onclick={(e) => { e.preventDefault(); e.stopPropagation(); const nowFav = !$favorites.includes(song.number); favorites.toggle(song.number); haptic(nowFav ? 15 : 8); track('favorite_toggled', { number: song.number, favorited: nowFav, source: 'list' }); }}
-            class="absolute top-3 right-3 p-1.5 rounded-md transition-colors flex {$favorites.includes(song.number) ? 'text-red-500 hover:text-red-600' : 'text-gray-300 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-400'}"
+            class="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-lg transition-colors {$favorites.includes(song.number) ? 'text-red-500' : 'text-gray-300 dark:text-gray-600 hover:text-red-400'}"
             aria-label={$favorites.includes(song.number) ? `Remover ${song.title} dos favoritos` : `Adicionar ${song.title} aos favoritos`}
           >
             <span class="mi mi-sm {$favorites.includes(song.number) ? 'mi-filled' : ''}">favorite</span>
           </button>
-        </a>
+        </li>
       {/each}
-    </div>
+    </ul>
   {:else if showFavoritesOnly && $favorites.length === 0}
     <div class="text-center py-16">
       <span class="mi mi-lg text-gray-300 dark:text-gray-700 block mb-2" style="font-size: 48px;">favorite</span>
