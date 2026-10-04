@@ -50,6 +50,7 @@
     if (song) {
       track('song_viewed', { song_id: song.id, number: song.number, title: song.title });
       recentlyViewed.add(song.number);
+      painelAberto = false;
       noteDraft = $notes[song.number] || '';
       showNotes = !!$notes[song.number];
       activeVerse = -1;
@@ -123,8 +124,21 @@
   const verses = $derived(song ? parseVerses(song.content) : []);
   const isFavorite = $derived(song ? $favorites.includes(song.number) : false);
   const externalLinks = $derived(song ? (curatedLinks[song.number] || {}) : {});
-  // Com partitura própria (canal Harpa Cristã Partituras), o botão leva ao bloco da página em vez do site externo.
+  // Partituras do canal Harpa Cristã Partituras: no desktop ficam na coluna da direita; no celular, as
+  // miniaturas ao lado do título abrem o painel embaixo dele.
   const temPartituraPropria = $derived(song ? !!partituras.hinos[String(song.number)]?.versoes?.length : false);
+  const hoje = new Date().toLocaleDateString('sv-SE');
+  const videos = $derived(song ? (partituras.hinos[String(song.number)]?.versoes || [])
+    .filter(v => v.youtube_id && (!v.publicado_em || v.publicado_em <= hoje)) : []);
+  const temExternos = $derived(!!externalLinks.chord || (!!externalLinks.sheet && !temPartituraPropria));
+  let painelAberto = $state(false);
+  let painelInstrumento = $state(null);
+
+  function abrirPainel(instrumento) {
+    painelInstrumento = instrumento;
+    painelAberto = true;
+    track('partitura_thumb_clicked', { number: song.number, instrument: instrumento || 'todas' });
+  }
 
   async function handleShare() {
     if (!song) return;
@@ -225,7 +239,7 @@
     </div>
   </div>
 
-  <div class="container mx-auto px-4 py-3 max-w-2xl">
+  <div class="container mx-auto px-4 py-3 {temPartituraPropria ? 'max-w-2xl lg:max-w-6xl' : 'max-w-2xl'}">
     <!-- Top bar -->
     <div class="flex items-center justify-between mb-3">
       <button
@@ -321,13 +335,28 @@
           {/if}
         </div>
 
-        <!-- More menu (mobile only) -->
-        <div class="relative sm:hidden">
+        <!-- More menu: no celular tem tudo; no desktop, só o que não tem ícone na barra (links externos) -->
+        <div class="relative {temExternos ? '' : 'sm:hidden'}">
           <button onclick={() => showMoreMenu = !showMoreMenu} class="btn-icon" aria-label="Mais opções">
             <span class="mi mi-sm">more_vert</span>
           </button>
           {#if showMoreMenu}
             <div class="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-20 py-1">
+              {#if temExternos}
+                <div class="px-3 py-1 text-xs text-gray-400 uppercase tracking-wider">Em outros sites</div>
+                {#if externalLinks.chord}
+                  <a href={externalLinks.chord} target="_blank" rel="noreferrer"
+                    onclick={() => { showMoreMenu = false; track('external_chord_opened', { number: song.number }); }}
+                    class="block px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Cifra ↗</a>
+                {/if}
+                {#if externalLinks.sheet && !temPartituraPropria}
+                  <a href={externalLinks.sheet} target="_blank" rel="noreferrer"
+                    onclick={() => { showMoreMenu = false; track('external_sheet_opened', { number: song.number }); }}
+                    class="block px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Partitura ↗</a>
+                {/if}
+                <div class="border-t border-gray-100 dark:border-gray-800 my-1 sm:hidden"></div>
+              {/if}
+              <div class="sm:hidden">
               <button onclick={() => { showMoreMenu = false; handleCopy(); }} class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
                 Copiar letra
               </button>
@@ -354,55 +383,60 @@
                 onclick={() => { createAndAdd(); showMoreMenu = false; }}
                 class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-brand-600 dark:text-brand-400"
               >+ Nova lista</button>
+              </div>
             </div>
           {/if}
         </div>
       </div>
     </div>
 
+    <div class={temPartituraPropria ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10' : ''}>
+    <div class="min-w-0">
     <!-- Song header -->
-    <div class="mb-4" bind:this={titleEl}>
-      <div class="flex items-center gap-2">
+    <div class="mb-4 flex items-start gap-3" bind:this={titleEl}>
+      <div class="flex items-center gap-2 flex-1 min-w-0">
         <span class="shrink-0 w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center text-base font-bold">
           {song.number}
         </span>
         <h1 class="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">{song.title}</h1>
       </div>
+      {#if temPartituraPropria}
+        <!-- Miniaturas (só celular/tablet): no desktop o player já está na coluna da direita. -->
+        <div class="lg:hidden flex gap-1.5 shrink-0 max-w-[46%] overflow-x-auto -mr-4 pr-4" aria-label="Vídeos da partitura">
+          {#each videos as v (v.instrumento)}
+            <button
+              onclick={() => abrirPainel(v.instrumento)}
+              class="relative shrink-0 w-28 aspect-video rounded-lg overflow-hidden bg-gray-800"
+              aria-label="Vídeo da partitura para {v.rotulo}"
+            >
+              <img src="https://i.ytimg.com/vi/{v.youtube_id}/mqdefault.jpg" alt="" loading="lazy" class="w-full h-full object-cover" />
+              <span class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></span>
+              <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center">
+                <span class="mi text-white" style="font-size: 20px;">play_arrow</span>
+              </span>
+              <span class="absolute bottom-0.5 left-1.5 right-1 text-[10px] leading-tight font-semibold text-white text-left truncate">{v.rotulo}</span>
+            </button>
+          {/each}
+          <button
+            onclick={() => abrirPainel(null)}
+            class="shrink-0 w-14 aspect-video self-start rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex flex-col items-center justify-center"
+            aria-label="Todas as partituras e PDFs"
+          >
+            <span class="mi mi-sm">library_music</span>
+            <span class="text-[10px] font-semibold">PDF</span>
+          </button>
+        </div>
+      {/if}
     </div>
 
-    <!-- External curated links -->
-    {#if externalLinks.chord || externalLinks.sheet || temPartituraPropria}
-      <div class="flex flex-wrap gap-2 mb-4">
-        {#if externalLinks.chord}
-          <a
-            href={externalLinks.chord}
-            target="_blank"
-            rel="noreferrer"
-            onclick={() => track('external_chord_opened', { number: song.number })}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-gray-900 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-gray-800"
-          >
-            <span class="mi mi-sm">music_note</span> Ver cifra ↗
-          </a>
-        {/if}
-        {#if temPartituraPropria}
-          <a
-            href="#partituras"
-            onclick={() => track('partituras_anchor_clicked', { number: song.number })}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-gray-900 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-gray-800"
-          >
-            <span class="mi mi-sm">library_music</span> Partitura e vídeo ↓
-          </a>
-        {:else if externalLinks.sheet}
-          <a
-            href={externalLinks.sheet}
-            target="_blank"
-            rel="noreferrer"
-            onclick={() => track('external_sheet_opened', { number: song.number })}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-gray-900 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-gray-800"
-          >
-            <span class="mi mi-sm">library_music</span> Ver partitura ↗
-          </a>
-        {/if}
+    {#if painelAberto}
+      <div class="lg:hidden relative mb-4">
+        <button
+          onclick={() => painelAberto = false}
+          class="absolute right-2 top-2 z-10 btn-icon text-gray-500 dark:text-gray-400"
+          aria-label="Fechar partituras"
+        ><span class="mi mi-sm">close</span></button>
+        <Partituras number={song.number} instrumento={painelInstrumento} autoplay={!!painelInstrumento} class="" />
       </div>
     {/if}
 
@@ -448,8 +482,6 @@
         </div>
       {/each}
     </div>
-
-    <Partituras number={song.number} />
 
     <!-- Notes -->
     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
@@ -510,6 +542,15 @@
       Use as setas <kbd class="border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 font-mono">&larr;</kbd>
       <kbd class="border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 font-mono">&rarr;</kbd> para navegar
     </p>
+    </div>
+    {#if temPartituraPropria}
+      <aside class="hidden lg:block">
+        <div class="sticky top-20">
+          <Partituras number={song.number} class="" />
+        </div>
+      </aside>
+    {/if}
+    </div>
   </div>
   </div>
 

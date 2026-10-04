@@ -6,8 +6,9 @@
   import partituras from '../../../data/partituras.json';
   import { track } from '$lib/analytics.js';
 
-  // `instrumento` fixa a versão inicial (páginas /h/<nº>/<instrumento>); sem ele, vale o último escolhido.
-  let { number, instrumento = null } = $props();
+  // `instrumento` fixa a versão inicial (páginas /h/<nº>/<instrumento>, miniatura tocada no celular);
+  // sem ele, vale o último escolhido. `autoplay` já abre o player (a pessoa tocou numa miniatura).
+  let { number, instrumento = null, autoplay = false, class: classe = 'mt-8 mb-6' } = $props();
 
   const CHAVE = 'hc_instrumento';
   const hoje = new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
@@ -19,6 +20,7 @@
   );
 
   let escolhido = $state(instrumento);
+  let secao;
   let tocando = $state(false);
 
   function preferido() {
@@ -30,8 +32,11 @@
     if (!versoes.length) return;
     const pref = preferido();
     const inicial = instrumento || pref;
-    escolhido = versoes.find(v => v.instrumento === inicial)?.instrumento || versoes[0].instrumento;
-    tocando = false;
+    const v = versoes.find(v => v.instrumento === inicial) || versoes[0];
+    escolhido = v.instrumento;
+    tocando = autoplay && !!v.video;
+    // A página de hino monta o bloco duas vezes (coluna do desktop e painel do celular); só conta o visível.
+    if (secao?.offsetParent === null) return;
     track('partituras_shown', { number, versions: versoes.length, preferred: pref });
   });
 
@@ -51,9 +56,9 @@
 </script>
 
 {#if versoes.length}
-  <section id="partituras" class="mt-8 mb-6 scroll-mt-20 rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-4" aria-labelledby="partituras-titulo">
+  <section bind:this={secao} class="{classe} rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-4" aria-label="Partitura por instrumento">
     <div class="flex items-center justify-between gap-2 mb-3">
-      <h2 id="partituras-titulo" class="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
         <span class="mi mi-sm text-brand-600 dark:text-brand-400">library_music</span> Partitura por instrumento
       </h2>
       <a
