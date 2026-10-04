@@ -273,7 +273,7 @@
     <!-- Novo no canal -->
     {#if novoNoCanal}
       <a
-        href="{base}/h/{novoNoCanal.numero}/{novoNoCanal.instrumento}"
+        href="{base}/h/{novoNoCanal.numero}/{novoNoCanal.instrumento}?ver=video"
         onclick={() => track('novo_no_canal_opened', { number: novoNoCanal.numero, instrument: novoNoCanal.instrumento })}
         class="flex items-center gap-3 mb-6 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
       >
