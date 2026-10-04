@@ -165,6 +165,7 @@
    * O "já pedi" fica no localStorage só para a pessoa não ficar sem resposta ao tocar — não é
    * contagem de verdade, que vive no Amplitude.
    */
+  const POST_PEDIDOS = 'https://www.youtube.com/post/UgkxAyn7YBAeKjSESTKluAlNy_4U40H9TX_A';
   const CHAVE_PEDIDOS = 'hc_pedidos';
   let pedido = $state(false);
 
@@ -181,7 +182,7 @@
       if (!lista.includes(song.number)) localStorage.setItem(CHAVE_PEDIDOS, JSON.stringify([...lista, song.number]));
     } catch {}
     pedido = true;
-    window.open(`${partituras.canal}/community`, '_blank', 'noreferrer');
+    window.open(POST_PEDIDOS, '_blank', 'noreferrer');
   }
 
   let aba = $state('letra');
