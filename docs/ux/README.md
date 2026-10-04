@@ -1,7 +1,7 @@
 # Revisão de UX/UI — Harpa Cristã Online
 
 > Outubro de 2026. Objetivo do produto: ser o **Cifra Club + Musescore dos hinos da Harpa Cristã**.
-> As telas propostas estão no canvas de design (privado): <https://claude.ai/code/artifact/adbc6b49-fab6-44ae-97ac-cb0e3d590ba2>
+> As telas propostas estão em [`telas-propostas.pdf`](telas-propostas.pdf) (12 páginas): diagnóstico desktop e mobile, mapa do produto, ciclo canal ↔ app e as 8 telas da proposta — home, hino só com letra, hino com partitura, página de chegada do YouTube, culto, cifra, partitura interativa e o desktop com painel de ferramentas.
 
 ## 1. Decisões que guiam a revisão
 
