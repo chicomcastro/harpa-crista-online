@@ -401,7 +401,7 @@
     class="fixed left-0 right-0 top-14 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-transform duration-200 will-change-transform {titleVisible ? '-translate-y-full pointer-events-none' : 'translate-y-0'}"
     aria-hidden={titleVisible}
   >
-    <div class="container mx-auto px-4 max-w-2xl h-12 flex items-center gap-3">
+    <div class="container mx-auto px-4 max-w-2xl lg:max-w-5xl h-12 flex items-center gap-3">
       <button
         onclick={() => { if (history.length > 1) history.back(); else window.location.href = `${base}/`; }}
         class="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 shrink-0"
@@ -694,9 +694,12 @@
     <!--
       Painel de ferramentas do desktop (#6). Só na aba Letra: rolagem automática e tamanho de texto
       não fazem nada numa pauta nem num vídeo, e um painel que não responde é pior que painel nenhum.
+
+      O sticky para em 7.5rem: 3.5rem do header + 3rem do mini header do hino, que aparece
+      justamente quando o título sai de vista — ou seja, sempre que o painel está grudado.
     -->
     <aside class="hidden {aba === 'letra' ? 'lg:block' : ''}">
-      <div class="sticky top-20 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+      <div class="sticky top-[7.5rem] rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <h2 class="text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold mb-3">Ferramentas</h2>
 
         <div class="flex items-center justify-between gap-2 mb-3">
