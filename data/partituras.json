@@ -151,6 +151,30 @@
      "pdf_url": "https://drive.google.com/file/d/1UxeikU3i4rSigvs1ILKchUQbU6o5CDC-/view?usp=sharing"
     },
     {
+     "instrumento": "piano-iniciante",
+     "rotulo": "Piano (Iniciante)",
+     "tipo": "tutorial",
+     "youtube_id": "S4gcyKRt238",
+     "publicado_em": "2026-10-24",
+     "pdf_url": "https://drive.google.com/file/d/18S-DYszjVuu3SGXdZEkWKUFMXL6nTmSq/view?usp=sharing"
+    },
+    {
+     "instrumento": "piano-intermediario",
+     "rotulo": "Piano (Intermediário)",
+     "tipo": "tutorial",
+     "youtube_id": "cre1bZlbarg",
+     "publicado_em": "2026-10-26",
+     "pdf_url": "https://drive.google.com/file/d/1EtVsWmdNh48UISvnOae-uuvwZd8JCiFw/view?usp=sharing"
+    },
+    {
+     "instrumento": "piano-avancado",
+     "rotulo": "Piano (Avançado)",
+     "tipo": "tutorial",
+     "youtube_id": "bmUokv3p5o4",
+     "publicado_em": "2026-10-28",
+     "pdf_url": "https://drive.google.com/file/d/1vcAZSv-p5abLSpoW3dlAwdAZ5ESfL02b/view?usp=sharing"
+    },
+    {
      "instrumento": "quarteto-cordas",
      "rotulo": "Quarteto de Cordas",
      "tipo": "arranjo",
