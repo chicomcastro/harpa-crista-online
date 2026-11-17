@@ -611,6 +611,67 @@
     }
    ]
   },
+  "186": {
+   "nome": "De Valor em Valor",
+   "versoes": [
+    {
+     "instrumento": "violino",
+     "rotulo": "Violino",
+     "tipo": "melodia",
+     "youtube_id": null,
+     "publicado_em": null,
+     "pdf_url": "https://drive.google.com/file/d/1zin-aUkH7R54wxhqgv2iFcWDOyeQKZH1/view?usp=sharing"
+    },
+    {
+     "instrumento": "viola",
+     "rotulo": "Viola de Arco",
+     "tipo": "melodia",
+     "youtube_id": null,
+     "publicado_em": null,
+     "pdf_url": "https://drive.google.com/file/d/1P5XDjm0fxNAWMDWX3wv6KDqTtFSx8ARi/view?usp=sharing"
+    },
+    {
+     "instrumento": "violoncelo",
+     "rotulo": "Violoncelo",
+     "tipo": "melodia",
+     "youtube_id": null,
+     "publicado_em": null,
+     "pdf_url": "https://drive.google.com/file/d/1kRHDAODn6wfh7a9BvH8lm5KtRyjn5iHK/view?usp=sharing"
+    },
+    {
+     "instrumento": "trompete",
+     "rotulo": "Trompete",
+     "tipo": "melodia",
+     "youtube_id": null,
+     "publicado_em": null,
+     "pdf_url": "https://drive.google.com/file/d/16mWiSaLvGd66x15x91Olmh4R_U1R86aw/view?usp=sharing"
+    },
+    {
+     "instrumento": "trombone",
+     "rotulo": "Trombone",
+     "tipo": "melodia",
+     "youtube_id": null,
+     "publicado_em": null,
+     "pdf_url": "https://drive.google.com/file/d/1RySFGAmwIbRrWfTg6scTHEkn2c5XPr7R/view?usp=sharing"
+    },
+    {
+     "instrumento": "sax-alto",
+     "rotulo": "Sax Alto",
+     "tipo": "melodia",
+     "youtube_id": null,
+     "publicado_em": null,
+     "pdf_url": "https://drive.google.com/file/d/12lwFlxCCVzopvygBgVsVaUxDbtajJgqG/view?usp=sharing"
+    },
+    {
+     "instrumento": "quarteto-cordas",
+     "rotulo": "Quarteto de Cordas",
+     "tipo": "arranjo",
+     "youtube_id": null,
+     "publicado_em": null,
+     "pdf_url": "https://drive.google.com/file/d/106E60qv963IZ3wYxqC7dnk4xNv__3-Rz/view?usp=sharing"
+    }
+   ]
+  },
   "187": {
    "nome": "Mais Perto Quero Estar",
    "versoes": [
